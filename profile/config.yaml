@@ -1,0 +1,70 @@
+##########################################################################################
+# Configuration file for Snakemake profile
+# Author: Redwan Farooq
+##########################################################################################
+
+
+# --------------------------------------------------
+# General parameters
+# --------------------------------------------------
+# See documentation for Snakemake for full list of
+# available command line flags:
+# https://snakemake.readthedocs.io/
+# ***
+# Modifying this section may prevent loading of
+# environment modules and/or conda environments
+jobscript: jobscript.sh
+use-envmodules: True
+use-conda: True
+# ***
+local-cores: 1
+jobs: 100
+latency-wait: 60
+keep-going: True
+printshellcmds: True
+
+
+# --------------------------------------------------
+# Cluster parameters
+# --------------------------------------------------
+# If 'cluster' not specified, defaults to local
+# execution
+# Shell command for job submission
+cluster:
+  mkdir -p slurm/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --ntasks={resources.tasks}
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --time={resources.runtime}
+    --job-name={rule}.{jobid}
+    --output=slurm/{rule}/%x-%j.out
+    --parsable
+# Shell command for job cancellation
+cluster-cancel: scancel
+# Job name
+jobname: '{rule}.{jobid}'
+# Default global job resources
+default-resources:
+  partition: short
+  tasks: 1
+  disk_mb: None
+  mem_mib: None
+# Specified job resources for each rule (will
+# override defaults)
+set-threads:
+  droplet_qc: 1
+# 'mem' and 'runtime' are Snakemake standard resources
+# Values supplied are parsed by the 'humanfriendly'
+# package
+# 'mem' accepts a number followed by a unit (B, KB,
+# MB, GB, TB, PB, KiB, MiB, GiB, TiB, PiB); converted
+# to MB and passed to 'mem_mb'
+# 'runtime' accepts a number followed by a unit (ms, s,
+# m, h, d, w, y for seconds, minutes, hours, days, weeks 
+# and years, respectively); converted to minutes
+set-resources:
+  droplet_qc:
+    mem: 8GiB
+    runtime: 10m

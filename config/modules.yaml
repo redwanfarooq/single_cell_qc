@@ -1,0 +1,12 @@
+##########################################################################################
+# Module rule specifications file for Snakemake single cell data QC pipeline
+# Author: Redwan Farooq
+##########################################################################################
+
+# --------------------------------------------------
+# Modules
+# --------------------------------------------------
+# Available pipeline module names and lists of rule
+# names (as per *.smk file names) in each module
+qc:
+  - droplet_qc

@@ -1,0 +1,60 @@
+##########################################################################################
+# Configuration file for Snakemake pipeline
+# Author: Redwan Farooq
+# Complete ALL entries in sections marked 'REQUIRED'
+# Comment ('#') any unused entries in sections marked 'OPTIONAL'
+##########################################################################################
+
+
+# --------------------------------------------------
+# Module
+# --------------------------------------------------
+# REQUIRED
+# Pipeline module
+module: qc
+
+
+# --------------------------------------------------
+# Input/output directories
+# --------------------------------------------------
+# REQUIRED
+# Pipeline input directories
+gex_dir: /path/to/gex_dir
+hto_dir: /path/to/hto_dir
+# Pipeline output directories
+output_dir:
+  data: /project/fuggerlab/rfarooq/project/project_name/data/processed/qc
+  reports: /project/fuggerlab/rfarooq/project/project_name/results/reports/qc
+
+# OPTIONAL
+# If 'scripts_dir' not specified, defaults to
+# 'resources/scripts'
+# scripts_dir:
+# If 'metadata_dir' not specified, defaults to
+# 'metadata'
+# metadata_dir:
+
+
+# --------------------------------------------------
+# Metadata files
+# *** RELATIVE paths from 'metadata_dir' ***
+# --------------------------------------------------
+# REQUIRED
+# Sample hashing summary table in CSV format
+# Required fields:
+#   donor: donor ID
+#   hash: hash ID
+#   sample: sample name
+#   hto: hashtag antibody ID
+#   cells_loaded: number of cells loaded
+samples: samples.csv
+
+
+# --------------------------------------------------
+# Script parameters
+# --------------------------------------------------
+# OPTIONAL
+emptydrops_lower: 100 # default: 100
+emptydrops_niters: 10000 # default: 10000
+demuxmix_model: naive # default: auto
+demuxmix_pAcpt: 0.8 # default: 0.9
