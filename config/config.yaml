@@ -19,12 +19,12 @@ module: qc
 # --------------------------------------------------
 # REQUIRED
 # Pipeline input directories
-gex_dir: /path/to/gex_dir
-hto_dir: /path/to/hto_dir
+gex_dir: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac
+hto_dir: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto
 # Pipeline output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/project_name/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/project_name/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/qc
+  reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/qc
 
 # OPTIONAL
 # If 'scripts_dir' not specified, defaults to
