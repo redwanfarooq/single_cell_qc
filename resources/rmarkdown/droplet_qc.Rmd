@@ -14,9 +14,9 @@ params:
   rmd: "droplet_qc.Rmd"
   sample_id: NULL
   metadata: NULL
-  gex_dir: NULL
-  hto_dir: NULL
-  output_dir: NULL
+  output: NULL
+  gex_matrix: NULL
+  hto_matrix: NULL
   emptydrops_lower: 100
   emptydrops_niters: 10000
   demuxmix_model: "auto"
@@ -30,7 +30,8 @@ knitr::opts_chunk$set(
   error = TRUE,
   message = FALSE,
   warning = FALSE,
-  comment = ""
+  comment = "",
+  results = "asis"
 )
 
 # Load packages
@@ -49,34 +50,36 @@ if (exists("snakemake")) {
   log <- file(snakemake@log[[1]], open = "w")
   sink(log, type = "message") # write stderr to Snakemake log file
 
-  snakemake@source("qc.R")
+  snakemake@source("functions.R")
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
-  for (x in names(snakemake@params)) {
-    params[[x]] <- snakemake@params[[x]]
-  }
+  params <- update.params(params, snakemake@params)
   lockBinding("params", .GlobalEnv)
 
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
 } else {
   # if running in isolation
-  source("qc.R")
+  source("functions.R")
+  unlockBinding("params", .GlobalEnv)
+  for (x in c("output", "gex_matrix", "hto_matrix")) {
+    params[[x]] <- sprintf(params[[x]], params$sample_id)
+  }
+  lockBinding("params", .GlobalEnv)
 }
 
-# Check for missing params
-is.missing <- sapply(params, is.null)
+# Check for missing required params
+required <- c(
+  "sample_id",
+  "metadata",
+  "output",
+  "gex_matrix",
+  "hto_matrix"
+)
+is.missing <- sapply(params[required], is.null)
 if (any(is.missing)) {
-  names <- paste(names(params)[is.missing], collapse = ", ")
+  names <- paste(names(params[required])[is.missing], collapse = ", ")
   stop(sprintf("The following required parameters are missing: %s", names))
-}
-
-# Format input paths
-gex.matrix.path <- file.path(params$gex_dir, params$sample_id, "outs/raw_feature_bc_matrix/matrix.mtx.gz")
-if (params$hto_dir == params$gex_dir) {
-  hto.matrix.path <- gex.matrix.path
-} else {
-  hto.matrix.path <- file.path(params$hto_dir, sprintf("%1$s/%1$s_Tag_Counts.csv", params$sample_id))
 }
 ```
 
@@ -85,33 +88,30 @@ if (params$hto_dir == params$gex_dir) {
 # Overview
 
 1. Load GEX and HTO count matrices
-2. Run cell calling algorithm on gene expression count matrix to filter empty droplet barcodes
+2. Run cell calling algorithm on GEX count matrix to filter empty droplet barcodes
 3. Run HTO demultiplexing algorithm to classify barcodes as 'singlet' (with assigned HTO), 'multiplet', 'negative' or 'uncertain'
 4. Run multiplet calling algorithm to predict intra-sample multiplets based on known inter-sample multiplets
 5. Output CSV file containing cell metadata for barcodes passing QC filters
 
 # Data loading
 
-* **Metadata:**
-<pre>`r params$metadata %>% gsub(pattern = "  ", replacement = "&nbsp;&nbsp;")`</pre>
-
 ```{r load-metadata}
+cat("* **Metadata:**", "\n")
+cat("```", params$metadata, "```", sep = "\n")
 md <- yaml::yaml.load(params$metadata)
 ```
 
-* **GEX matrix:** `r gex.matrix.path` 
-
 ```{r load-gex-matrix}
-gex.mat <- get.10x.matrix(gex.matrix.path, type = "Gene Expression")
+cat("* **GEX matrix:**", params$gex_matrix, "\n")
+gex.mat <- get.10x.matrix(params$gex_matrix, type = "Gene Expression")
 ```
 
-* **HTO matrix:** `r hto.matrix.path`
-
 ```{r load-hto-matrix}
-if (hto.matrix.path == gex.matrix.path) {
-  hto.mat <- get.10x.matrix(hto.matrix.path, type = "Antibody capture")
+cat("* **HTO matrix:**", params$hto_matrix, "\n")
+if (params$hto_matrix == params$gex_matrix) {
+  hto.mat <- get.10x.matrix(params$hto_matrix, type = "Antibody Capture")
 } else {
-  hto.mat <- get.barcounter.matrix(hto.matrix.path, add.suffix = TRUE)
+  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_", add.suffix = TRUE)
 }
 wl <- names(md)
 hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
@@ -119,9 +119,8 @@ hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
 
 # Data processing
 
-## Cell calling {.tabset}
-
 ```{r cell-calling}
+cat("## Cell calling {.tabset}", "\n\n")
 set.seed(100)
 ed.res <- emptyDrops(gex.mat, lower = params$emptydrops_lower, niters = params$emptydrops_niters, test.ambient = TRUE)
 ed.stats <- list(
@@ -135,29 +134,26 @@ gex.mat <- gex.mat[, which(ed.res$FDR <= 0.001)]
 hto.mat <- hto.mat[, match(colnames(gex.mat), colnames(hto.mat))]
 ```
 
-### Classification
-
-* **Cell-containing droplets:** `r ed.stats$cells %>% format(big.mark = ",")`
-* **Empty droplets:** `r ed.stats$empty %>% format(big.mark = ",")`
-* **Background droplets:** `r ed.stats$background %>% format(big.mark = ",")`
-
-```{r barcode-rank-plot, fig.width=7, fig.height=5}
+```{r cell-calling-classification}
+cat("### Classification", "\n\n")
+cat("* **Cell-containing droplets:**", ed.stats$cells %>% format(big.mark = ","), "\n")
+cat("* **Empty droplets:**", ed.stats$empty %>% format(big.mark = ","), "\n")
+cat("* **Background droplets:**", ed.stats$background %>% format(big.mark = ","), "\n")
+cat("\n\n")
 bcrank.plot(bcrank.res, ed.res) %>% ggplotly()
 ```
 
-### Diagnostics 
-
-* **Background UMI threshold:** `r params$emptydrops_lower %>% format(big.mark = ",")`
-* **Monte Carlo simulation iterations:** `r params$emptydrops_niters %>% format(big.mark = ",")`
-* **Limited:** `r if_else(ed.stats$limited, "Yes", "No")`
-
-```{r pvalue-plot, fig.width=7, fig.height=5}
+```{r cell-calling-diagnostics}
+cat("### Diagnostics", "\n\n")
+cat("* **Background UMI threshold:**", params$emptydrops_lower %>% format(big.mark = ","), "\n")
+cat("* **Monte Carlo simulation iterations:**", params$emptydrops_niters %>% format(big.mark = ","), "\n")
+cat("* **Limited:**", ifelse(ed.stats$limited, "Yes", "No"), "\n")
+cat("\n\n")
 pvalue.plot(ed.res) %>% ggplotly()
 ```
 
-## HTO demultiplexing {.tabset}
-
 ```{r hto-demultiplexing}
+cat("## HTO demultiplexing {.tabset}", "\n\n")
 set.seed(100)
 dmm <- demuxmix(
   hto = as.matrix(hto.mat),
@@ -178,9 +174,8 @@ demux.stats <- demux.stats$count %>%
   setNames(demux.stats$Type)
 ```
 
-### Classification
-
-```{r classification, fig.width=7, fig.height=5}
+```{r hto-demultiplexing-classification}
+cat("### Classification", "\n\n")
 bar.plot(
   data = demux.res %>% mutate(Type = factor(Type, levels = c("singlet", "multiplet", "negative", "uncertain"))),
   pos = Type,
@@ -190,31 +185,29 @@ bar.plot(
   ggplotly(tooltip = c("fill", "x"))
 ```
 
-### Raw HTO counts
-
-```{r raw-hto-counts, fig.width=7, fig.height=length(wl)}
+```{r hto-demultiplexing-raw-hto-counts, fig.width=7, fig.height=length(wl)}
+cat("### Raw HTO counts", "\n\n")
 logcounts.plot(hto.mat, title = "Raw HTO counts")
 ```
 
-### Demultiplexed HTO counts
-
-```{r demultiplexed-hto-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
+```{r hto-demultiplexing-demultiplexed-hto-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
+cat("### Demultiplexed HTO counts", "\n\n")
 logcounts.plot(hto.mat, samples = demux.res$Sample, title = "Demultiplexed HTO counts")
 ```
 
-### Diagnostics
-
-* **Mode:** `r params$demuxmix_model`
-* **Chosen model:**
-`r sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n")`
-* **Acceptance probability:** `r params$demuxmix_pAcpt^length(wl) %>% round(2)` (`r params$demuxmix_pAcpt %>% round(2)` per HTO)
-
-## Multiplet calling {.tabset}
+```{r hto-demultiplexing-diagnostics}
+cat("### Diagnostics", "\n\n")
+cat("* **Mode:**", params$demuxmix_model, "\n")
+cat("* **Chosen model:**", "\n")
+cat(sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n"), "\n")
+cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(2), paste0("(", params$demuxmix_pAcpt %>% round(2), " per HTO)"), "\n")
+```
 
 ```{r multiplet-calling}
+cat("## Multiplet calling {.tabset}", "\n\n")
 set.seed(100)
 sce <- SingleCellExperiment(assays = list(counts = gex.mat)) %>%
-  add.cell.metadata(demux.res[demux.res$Type %in% c("singlet", "multiplet"), "Sample", drop = FALSE]) %>%
+  add.cell.metadata(demux.res[demux.res$Type %in% c("singlet", "multiplet"), "Sample", drop = FALSE], replace = TRUE) %>%
   logNormCounts()
 dec <- modelGeneVar(sce)
 hvg <- getTopHVGs(dec, n = 1000)
@@ -236,22 +229,15 @@ rd.stats <- list(
 sce <- sce %>% add.cell.metadata(rd.res)
 ```
 
-### Classification
-
-* **Known (inter-sample) multiplets:** `r rd.stats$known %>% format(big.mark = ",")`
-* **Predicted (intra-sample) multiplets:** `r rd.stats$predicted %>% format(big.mark = ",")`
-
-```{r multiplets, fig.width=7, fig.height=5}
+```{r multiplet-calling-classification}
+cat("### Classification", "\n\n")
+cat("* **Known (inter-sample) multiplets:**", rd.stats$known %>% format(big.mark = ","), "\n")
+cat("* **Predicted (intra-sample) multiplets:**", rd.stats$predicted %>% format(big.mark = ","), "\n")
+cat("\n\n")
 multiplets.plot(sce) %>% ggplotly(tooltip = "colour")
 ```
 
 # Output
-
-* **Total barcodes passed:** `r rd.stats$singlets %>% format(big.mark = ",")`
-* **Total barcodes excluded:** `r sum(ed.stats$empty, ed.stats$background, demux.stats$negative, demux.stats$uncertain, rd.stats$known, rd.stats$predicted) %>% format(big.mark = ",")`
-  + **Empty droplets:** `r sum(ed.stats$empty, ed.stats$background) %>% format(big.mark = ",")`
-  + **Negative/uncertain HTO:** `r sum(demux.stats$negative, demux.stats$uncertain) %>% format(big.mark = ",")`
-  + **Multiplets:** `r sum(rd.stats$known, rd.stats$predicted) %>% format(big.mark = ",")`
 
 ```{r output}
 out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
@@ -262,18 +248,25 @@ out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
     Hash = stringr::str_split_i(params$sample_id, pattern = "-", i = 2),
     Sample = sapply(Sample, function(x) md[[x]]$sample)
   )
-if (!dir.exists(params$output_dir)) dir.create(params$output_dir, recursive = TRUE)
+if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)
 vroom::vroom_write(
   out,
-  file = file.path(params$output_dir, sprintf("%s.csv", params$sample_id)),
+  file = params$output,
   delim = ","
 )
+
+cat("* **Total barcodes passed:**", rd.stats$singlets %>% format(big.mark = ","), "\n")
+cat("* **Total barcodes excluded:**", sum(ed.stats$empty, ed.stats$background, demux.stats$negative, demux.stats$uncertain, rd.stats$known, rd.stats$predicted) %>% format(big.mark = ","), "\n")
+cat("  + **Empty droplets:**", sum(ed.stats$empty, ed.stats$background) %>% format(big.mark = ","), "\n")
+cat("  + **Negative/uncertain HTO:**", sum(demux.stats$negative, demux.stats$uncertain) %>% format(big.mark = ","), "\n")
+cat("  + **Multiplets:**", sum(rd.stats$known, rd.stats$predicted) %>% format(big.mark = ","), "\n")
+cat("\n\n")
 out
 ```
 
 # Session Info
 
-```{r session-info}
+```{r session-info, results="markup"}
 sessionInfo()
 ```
 

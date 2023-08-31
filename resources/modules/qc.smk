@@ -20,7 +20,8 @@ for key, value in parse_info(info).items():
 
 # Import rules
 include: 'rules/droplet_qc.smk'
-dirs = ['droplet_qc']
+include: 'rules/libraries_qc.smk'
+dirs = ['droplet_qc', 'libraries_qc']
 # --------------------------------------------------
 
 
