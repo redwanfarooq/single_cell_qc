@@ -67,7 +67,7 @@ samples: samples.csv
 # droplet_qc.Rmd
 emptydrops_lower: 100 # default: 100
 emptydrops_niters: 10000 # default: 10000
-demuxmix_model: naive # default: auto
+demuxmix_model: auto # default: auto
 demuxmix_pAcpt: 0.9 # default: 0.9
 # libraries_qc.Rmd
 gex_filters:
