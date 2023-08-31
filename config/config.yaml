@@ -31,8 +31,8 @@ output_dir:
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
 gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
-atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
 hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto/{sample}/{sample}_Tag_Counts.csv
+atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
 adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto/{sample}/{sample}_Tag_Counts.csv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
