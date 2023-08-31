@@ -10,3 +10,4 @@
 # names (as per *.smk file names) in each module
 qc:
   - droplet_qc
+  - libraries_qc

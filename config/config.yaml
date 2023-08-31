@@ -10,26 +10,36 @@
 # Module
 # --------------------------------------------------
 # REQUIRED
-# Pipeline module
+# Pipeline module for experimental design
+# Options:
+#   qc
+#     Additional required configuration:
+#       - 'gex_matrix' (input/output)
+#       - 'hto_matrix' (input/output)
 module: qc
 
 
 # --------------------------------------------------
-# Input/output directories
+# Input/output
 # --------------------------------------------------
 # REQUIRED
-# Pipeline input directories
-gex_dir: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac
-hto_dir: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto
-# Pipeline output directories
+# Output directories
 output_dir:
   data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/qc
   reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/qc
 
 # OPTIONAL
+# File paths for count matrices (use {sample} as placeholder for sample name)
+gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
+atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/gex_atac/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto/{sample}/{sample}_Tag_Counts.csv
+adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea-seq/test_01/adt_hto/{sample}/{sample}_Tag_Counts.csv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
+# If 'rmd_dir' not specified, defaults to
+# 'resources/rmarkdown'
+# rmd_dir:
 # If 'metadata_dir' not specified, defaults to
 # 'metadata'
 # metadata_dir:
@@ -54,7 +64,21 @@ samples: samples.csv
 # Script parameters
 # --------------------------------------------------
 # OPTIONAL
+# droplet_qc.Rmd
 emptydrops_lower: 100 # default: 100
 emptydrops_niters: 10000 # default: 10000
 demuxmix_model: naive # default: auto
 demuxmix_pAcpt: 0.8 # default: 0.9
+# libraries_qc.Rmd
+gex_filters:
+  library_size: false # default: true
+  library_complexity: false # default: true
+  mitochondrial_fraction: true # default: true
+atac_filters:
+  peak_count: false # default: true
+  peak_fraction: false # default: true
+  blacklist_fraction: false # default: true
+  nucleosome_signal: true # default: true
+  tss_enrichment: true # default: true
+adt_filters:
+  isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
