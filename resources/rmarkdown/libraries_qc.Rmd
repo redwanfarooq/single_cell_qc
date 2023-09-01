@@ -54,7 +54,7 @@ if (exists("snakemake")) {
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
-  params <- update.params(params, snakemake@params)
+  params <- update.params(snakemake@params)
   lockBinding("params", .GlobalEnv)
 
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
@@ -109,21 +109,21 @@ rownames(droplet.qc.res) <- droplet.qc.res$Barcode
 
 ```{r load-gex-matrix, eval=!is.null(params$gex_matrix)}
 cat("* **GEX matrix:**", params$gex_matrix, "\n")
-gex.mat <- get.10x.matrix(params$gex_matrix, type = "Gene Expression")
+gex.mat <- get.10x.matrix(params$gex_matrix, cells = rownames(droplet.qc.res), type = "Gene Expression")
 ```
 
 ```{r load-atac-matrix, eval=!is.null(params$atac_matrix)}
 cat("* **ATAC matrix:**", params$atac_matrix, "\n")
-atac.mat <- get.10x.matrix(params$atac_matrix, type = "Peaks")
+atac.mat <- get.10x.matrix(params$atac_matrix, cells = rownames(droplet.qc.res), type = "Peaks")
 ```
 
 ```{r load-adt-matrix, eval=!is.null(params$adt_matrix)}
 cat("* **ADT matrix:**", params$adt_matrix, "\n")
 if (params$adt_matrix == params$gex_matrix) {
-  adt.mat <- get.10x.matrix(params$adt_matrix, type = "Antibody Capture")
+  adt.mat <- get.10x.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), type = "Antibody Capture")
   adt.mat <- adt.mat[grep(pattern = "^ADT_", rownames(adt.mat)), ]
 } else {
-  adt.mat <- get.barcounter.matrix(params$adt_matrix, features.pattern = "^ADT_", add.suffix = TRUE)
+  adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), features.pattern = "^ADT_", add.suffix = TRUE)
 }
 ```
 
@@ -132,8 +132,8 @@ if (params$adt_matrix == params$gex_matrix) {
 ```{r gex-qc-metrics, eval=!is.null(params$gex_matrix)}
 cat("## GEX QC metrics {.tabset}", "\n\n")
 sce <- SingleCellExperiment(assays = list(counts = gex.mat)) %>%
-  add.cell.metadata(droplet.qc.res, replace = TRUE) %>%
-  add.feature.metadata(get.10x.features(params$gex_matrix, type = "Gene Expression"), replace = TRUE)
+  add.cell.metadata(droplet.qc.res) %>%
+  add.feature.metadata(get.10x.features(file.path(dirname(params$gex_matrix), "features.tsv.gz"), type = "Gene Expression"))
 is.mito <- grep("^MT-", rowData(sce)$Symbol) # pattern matching for mitochondrial genes
 sce <- addPerCellQC(sce, subsets = list(mito = is.mito))
 qc <- data.frame(row.names = colnames(sce))
@@ -217,19 +217,19 @@ scatter.plot(
 
 ```{r atac-qc-metrics, eval=!is.null(params$atac_matrix)}
 cat("## ATAC QC metrics {.tabset}", "\n\n")
-fragments <- CreateFragmentObject(file.path(dirname(params$atac_matrix), "../atac_fragments.tsv.gz"))
+fragments <- CreateFragmentObject(file.path(dirname(params$atac_matrix), "../atac_fragments.tsv.gz"), cells = rownames(droplet.qc.res))
 annotation <- GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86)
 seqlevels(annotation) <- paste0("chr", seqlevels(annotation))
 seu <- CreateSeuratObject(
   counts = CreateChromatinAssay(
-    counts = atac.mat[, match(rownames(droplet.qc.res), colnames(atac.mat))],
+    counts = atac.mat,
     sep = c(":", "-"),
     fragments = fragments,
     annotation = annotation
   ),
   assay = "ATAC"
 ) %>%
-  add.cell.metadata(droplet.qc.res, replace = TRUE)
+  add.cell.metadata(droplet.qc.res)
 qc <- data.frame(row.names = colnames(seu))
 if (params$atac_filters$peak_count) {
   seu$sum <- colSums(seu)
@@ -372,7 +372,7 @@ TSSPlot(seu, group.by = "low_tss_enrichment") +
 ```{r adt-qc-metrics, eval=!is.null(params$adt_matrix)}
 cat("## ADT QC metrics {.tabset}", "\n\n")
 sce <- SingleCellExperiment(assays = list(counts = adt.mat)) %>%
-  add.cell.metadata(droplet.qc.res, replace = TRUE)
+  add.cell.metadata(droplet.qc.res)
 if (is.null(params$adt_filters$isotype_control)) {
   qc <- cleanTagCounts(sce)
 } else {

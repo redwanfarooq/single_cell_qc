@@ -21,6 +21,7 @@ params:
   emptydrops_niters: 10000
   demuxmix_model: "auto"
   demuxmix_pAcpt: 0.9
+  multiplet_projection: "TSNE"
 ---
 
 ```{r setup, include=FALSE}
@@ -54,7 +55,7 @@ if (exists("snakemake")) {
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
-  params <- update.params(params, snakemake@params)
+  params <- update.params(snakemake@params)
   lockBinding("params", .GlobalEnv)
 
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
@@ -206,14 +207,13 @@ cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(
 ```{r multiplet-calling}
 cat("## Multiplet calling {.tabset}", "\n\n")
 set.seed(100)
-sce <- SingleCellExperiment(assays = list(counts = gex.mat)) %>%
-  add.cell.metadata(demux.res[demux.res$Type %in% c("singlet", "multiplet"), "Sample", drop = FALSE], replace = TRUE) %>%
+sce <- SingleCellExperiment(assays = list(counts = gex.mat[, demux.res$Type %in% c("singlet", "multiplet")])) %>%
+  add.cell.metadata(demux.res[demux.res$Type %in% c("singlet", "multiplet"), "Sample", drop = FALSE]) %>%
   logNormCounts()
 dec <- modelGeneVar(sce)
 hvg <- getTopHVGs(dec, n = 1000)
 sce <- sce %>%
-  runPCA(subset_row = hvg, ncomponents = 20) %>%
-  runUMAP(dimred = "PCA")
+  runPCA(subset_row = hvg, ncomponents = 20)
 rd.res <- recoverDoublets(
   sce,
   use.dimred = "PCA",
@@ -234,7 +234,7 @@ cat("### Classification", "\n\n")
 cat("* **Known (inter-sample) multiplets:**", rd.stats$known %>% format(big.mark = ","), "\n")
 cat("* **Predicted (intra-sample) multiplets:**", rd.stats$predicted %>% format(big.mark = ","), "\n")
 cat("\n\n")
-multiplets.plot(sce) %>% ggplotly(tooltip = "colour")
+multiplet.plot(sce, rd.res, projection = params$multiplet_projection, random.seed = 100) %>% ggplotly(tooltip = "colour")
 ```
 
 # Output
@@ -246,6 +246,7 @@ out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
   mutate(
     Donor = stringr::str_split_i(params$sample_id, pattern = "-", i = 1),
     Hash = stringr::str_split_i(params$sample_id, pattern = "-", i = 2),
+    Batch = paste(Donor, Hash, sep = "-"),
     Sample = sapply(Sample, function(x) md[[x]]$sample)
   )
 if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)
