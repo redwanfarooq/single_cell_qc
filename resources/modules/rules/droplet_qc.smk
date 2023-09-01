@@ -17,10 +17,11 @@ rule droplet_qc:
         gex_matrix = lambda wildcards: get_path(wildcards, config["gex_matrix"]),
         hto_matrix = lambda wildcards: get_path(wildcards, config["hto_matrix"]),
         output = lambda wildcards: get_path(wildcards, os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv")),
-        emptydrops_lower = config.get("emptydrops_lower", 100),
-        emptydrops_niters = config.get("emptydrops_niters", 10000),
-        demuxmix_model = config.get("demuxmix_model", "auto"),
-        demuxmix_pAcpt = config.get("demuxmix_pAcpt", 0.9)
+        emptydrops_lower = config.get("emptydrops_lower", None),
+        emptydrops_niters = config.get("emptydrops_niters", None),
+        demuxmix_model = config.get("demuxmix_model", None),
+        demuxmix_pAcpt = config.get("demuxmix_pAcpt", None),
+        multiplet_projection = config.get("multiplet_projection", None)
     conda: "singlecell-r"
     envmodules: "R-cbrg"
     message: "Running droplet processing QC for {wildcards.sample}"
