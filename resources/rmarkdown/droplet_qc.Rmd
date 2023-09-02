@@ -141,7 +141,18 @@ cat("* **Cell-containing droplets:**", ed.stats$cells %>% format(big.mark = ",")
 cat("* **Empty droplets:**", ed.stats$empty %>% format(big.mark = ","), "\n")
 cat("* **Background droplets:**", ed.stats$background %>% format(big.mark = ","), "\n")
 cat("\n\n")
-bcrank.plot(bcrank.res, ed.res) %>% ggplotly()
+ggplotly(
+  bcrank.plot(
+    bcrank.res,
+    ed.res,
+    title = "Barcode rank plot",
+    x.lab = "Rank",
+    y.lab = "Total UMI count",
+    colour.lab = "Fraction cells",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_gradient2(low = "#d82526", mid = "#ffc156", high = "#69b764", midpoint = 0.5)
+)
 ```
 
 ```{r cell-calling-diagnostics}
@@ -150,7 +161,14 @@ cat("* **Background UMI threshold:**", params$emptydrops_lower %>% format(big.ma
 cat("* **Monte Carlo simulation iterations:**", params$emptydrops_niters %>% format(big.mark = ","), "\n")
 cat("* **Limited:**", ifelse(ed.stats$limited, "Yes", "No"), "\n")
 cat("\n\n")
-pvalue.plot(ed.res) %>% ggplotly()
+ggplotly(
+  pvalue.plot(
+    ed.res,
+    binwidth = 0.01,
+    title = "Monte Carlo p-value distribution for background barcodes",
+    x.lab = "p-value"
+  )
+)
 ```
 
 ```{r hto-demultiplexing}
@@ -177,13 +195,18 @@ demux.stats <- demux.stats$count %>%
 
 ```{r hto-demultiplexing-classification}
 cat("### Classification", "\n\n")
-bar.plot(
-  data = demux.res %>% mutate(Type = factor(Type, levels = c("singlet", "multiplet", "negative", "uncertain"))),
-  pos = Type,
-  fill = Sample,
-  title = "Sample assignment"
-) %>%
-  ggplotly(tooltip = c("fill", "x"))
+ggplotly(
+  bar.plot(
+    data = demux.res %>% mutate(Type = factor(Type, levels = c("singlet", "multiplet", "negative", "uncertain"))),
+    pos = Type,
+    fill = Sample,
+    position = position_stack(reverse = TRUE),
+    title = "Sample assignment",
+    pos.lab = "Type",
+    fill.lab = "Sample"
+  ),
+  tooltip = c("fill", "x")
+)
 ```
 
 ```{r hto-demultiplexing-raw-hto-counts, fig.width=7, fig.height=length(wl)}
@@ -234,7 +257,15 @@ cat("### Classification", "\n\n")
 cat("* **Known (inter-sample) multiplets:**", rd.stats$known %>% format(big.mark = ","), "\n")
 cat("* **Predicted (intra-sample) multiplets:**", rd.stats$predicted %>% format(big.mark = ","), "\n")
 cat("\n\n")
-multiplet.plot(sce, rd.res, projection = params$multiplet_projection, random.seed = 100) %>% ggplotly(tooltip = "colour")
+ggplotly(
+  multiplet.plot(
+    sce,
+    rd.res,
+    projection = "TSNE",
+    random.seed = 100
+  ),
+  tooltip = "colour"
+)
 ```
 
 # Output

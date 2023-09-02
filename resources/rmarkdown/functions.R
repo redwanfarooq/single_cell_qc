@@ -50,7 +50,7 @@ get.10x.matrix <- function(file, cells = NULL, type = NULL, remove.suffix = FALS
   colnames(matrix) <- rownames(barcodes)
   rownames(matrix) <- rownames(features)
   if (!is.null(cells)) matrix <- matrix[, cells]
-  if (!is.null(type)) matrix <- matrix[features$Type == type, ]
+  if (!is.null(type)) matrix <- matrix[features$Type %in% type, ]
   return(matrix)
 }
 
@@ -79,9 +79,9 @@ get.10x.barcodes <- function(file, remove.suffix = FALSE) {
 }
 
 
-#' Get 10x features metadata
+#' Get 10x feature metadata
 #'
-#' Loads 10x features metadata from TSV.
+#' Loads 10x feature metadata from TSV.
 #'
 #' @inheritParams get.10x.matrix
 #'
@@ -103,7 +103,7 @@ get.10x.features <- function(file, type = NULL) {
   ) %>%
     as.data.frame()
   rownames(df) <- df$ID
-  if (!is.null(type)) df <- df[df$Type == type, ]
+  if (!is.null(type)) df <- df[df$Type %in% type, ]
   return(df)
 }
 
@@ -231,55 +231,92 @@ add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matchin
 }
 
 
-#' Generate barcode rank plot
+#' Generate scatter plot
 #'
-#' Makes a barcode rank plot coloured by fraction of barcodes at each rank called
-#' as cells using the output of [DropletUtils::barcodeRanks()] and
-#' [DropletUtils::emptyDrops()].
+#' Makes a scatter plot.
 #'
-#' @param bcrank.res DataFrame output of [DropletUtils::barcodeRanks()].
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @param data Data frame or object coercible to data frame.
+#' @param x Column in `data` to determine x position.
+#' @param y Column in `data` to determine y position.
+#' @param colour Column in `data` to determine colour.
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_point()].
+#' @param title Plot title.
+#' @param x.lab x-axis label.
+#' @param y.lab y-axis label.
+#' @param colour.lab Colour legend label.
+#' @param log Log-transform axis scales:
+#'  * `TRUE` to transform all axes
+#'  * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
 #'
 #' @export
-bcrank.plot <- function(bcrank.res, ed.res) {
-  data <- bcrank.res %>%
-    as.data.frame() %>%
-    cbind(FDR = ed.res$FDR) %>%
-    dplyr::group_by(rank, total) %>%
-    dplyr::summarise(fraction.cells = sum(FDR <= 0.001, na.rm = TRUE) / dplyr::n())
+scatter.plot <- function(data, x, y, colour, ..., title = NULL, x.lab = NULL, y.lab = NULL, colour.lab = NULL, log = NULL) {
+  data <- data %>%
+    as.data.frame()
 
   plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_point(mapping = ggplot2::aes(x = rank, y = total, colour = fraction.cells)) +
-    ggplot2::scale_x_log10() +
-    ggplot2::scale_y_log10() +
-    ggplot2::scale_colour_gradient2(low = "#d82526", mid = "#ffc156", high = "#69b764", midpoint = 0.5) +
-    ggplot2::labs(title = "Barcode rank plot", x = "Rank", y = "Total UMI count", colour = "Fraction cells") +
+    ggplot2::geom_point(mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, colour = {{ colour }}), ...) +
+    ggplot2::labs(title = title, x = x.lab, y = y.lab, colour = colour.lab) +
     ggplot2::theme_minimal()
+  if (!is.null(log)) {
+    if (is.logical(log) && log) log <- c("x", "y")
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
+  }
   return(plot)
 }
 
 
-#' Generate Monte Carlo p-value histogram for background barcodes
+#' Generate violin/beeswarm plot
 #'
-#' Makes a histogram of computed p-values for droplets with UMI count less than
-#' `lower` parameter used for [DropletUtils::emptyDrops()] (requires parameter
-#' `test.ambient = TRUE`).
+#' Makes a combined violin plot and beeswarm plot.
 #'
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @inheritParams scatter.plot
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_quasirandom()].
+#' @param points Logical scalar (default `TRUE`). Add beeswarm points.
 #'
 #' @returns Plot object.
 #'
 #' @export
-pvalue.plot <- function(ed.res) {
-  data <- ed.res %>%
-    as.data.frame() %>%
-    dplyr::filter(Total <= metadata(ed.res)$lower & Total > 0)
+violin.plot <- function(data, x, y, colour, ..., points = TRUE, title = NULL, x.lab = NULL, y.lab = NULL, colour.lab = NULL, log = NULL) {
+  data <- data %>%
+    as.data.frame()
 
-  plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_histogram(mapping = ggplot2::aes(x = PValue), binwidth = 0.01) +
-    ggplot2::labs(title = "Monte Carlo p-value distribution for background barcodes", x = "p-value") +
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, colour = {{ colour }})) +
+    ggplot2::geom_violin(colour = "grey50") +
+    ggplot2::labs(title = title, x = x.lab, y = y.lab, colour = colour.lab) +
+    ggplot2::theme_minimal()
+  if (points) {
+    plot <- plot +
+      ggbeeswarm::geom_quasirandom(...)
+  }
+  if (!is.null(log)) {
+    if (is.logical(log) && log) log <- "y"
+    if ("x" %in% log) stop("Unable to log transform categorical x-axis scale")
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
+  }
+  return(plot)
+}
+
+
+#' Generate histogram plot
+#'
+#' Makes a histogram plot.
+#'
+#' @param data Data frame or object coercible to data frame.
+#' @param x Column in `data` to determine x position.
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_histogram()].
+#' @param title Plot title.
+#' @param x.lab x-axis label.
+#'
+#' @returns Plot object.
+#'
+#' @export
+hist.plot <- function(data, x, ..., title = NULL, x.lab = NULL) {
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }})) +
+    ggplot2::geom_histogram(...) +
+    ggplot2::labs(title = title, x = x.lab) +
     ggplot2::theme_minimal()
   return(plot)
 }
@@ -292,22 +329,90 @@ pvalue.plot <- function(ed.res) {
 #' @param data Data frame or object coercible to data frame.
 #' @param pos Column in `data` to determine bar position.
 #' @param fill Column in `data` to determine bar fill.
-#' @title Plot title.
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_col()].
+#' @param title Plot title.
+#' @param pos.lab Categorical axis label.
+#' @param fill.lab Fill legend label.
+#' @param log Log-transform axis scales:
+#'  * `TRUE` to transform all axes
+#'  * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
 #'
 #' @export
-bar.plot <- function(data, pos, fill = pos, title = NULL) {
+bar.plot <- function(data, pos, fill = pos, ..., title = NULL, pos.lab = NULL, fill.lab = NULL, log = NULL) {
   data <- data %>%
     as.data.frame() %>%
     dplyr::group_by({{ pos }}, {{ fill }}) %>%
     dplyr::summarise(count = dplyr::n())
 
   plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_col(mapping = ggplot2::aes(x = count, y = {{ pos }}, fill = {{ fill }}), position = position_stack(reverse = TRUE)) +
+    ggplot2::geom_col(mapping = ggplot2::aes(x = count, y = {{ pos }}, fill = {{ fill }}), ...) +
     ggplot2::scale_y_discrete(limits = rev) +
-    ggplot2::labs(title = title) +
+    ggplot2::labs(title = title, y = pos.lab, fill = fill.lab) +
     ggplot2::theme_minimal()
+  if (!is.null(log)) {
+    if (is.logical(log) && log) log <- "x"
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
+    if ("y" %in% log) stop("Unable to log transform categorical y-axis scale")
+  }
+  return(plot)
+}
+
+
+#' Generate barcode rank plot
+#'
+#' Makes a barcode rank plot coloured by fraction of barcodes at each rank called
+#' as cells using the output of [DropletUtils::barcodeRanks()] and
+#' [DropletUtils::emptyDrops()].
+#'
+#' @param bcrank.res DataFrame output of [DropletUtils::barcodeRanks()].
+#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @param ... Arguments to pass to [scatter.plot()]
+#'
+#' @returns Plot object.
+#'
+#' @export
+bcrank.plot <- function(bcrank.res, ed.res, ...) {
+  data <- bcrank.res %>%
+    as.data.frame() %>%
+    cbind(FDR = ed.res$FDR) %>%
+    dplyr::group_by(rank, total) %>%
+    dplyr::summarise(fraction.cells = sum(FDR <= 0.001, na.rm = TRUE) / dplyr::n())
+
+  plot <- scatter.plot(
+    data,
+    x = rank,
+    y = total,
+    colour = fraction.cells,
+    ...
+  )
+  return(plot)
+}
+
+
+#' Generate Monte Carlo p-value histogram for background barcodes
+#'
+#' Makes a histogram of computed p-values for droplets with UMI count less than
+#' `lower` parameter used for [DropletUtils::emptyDrops()] (requires parameter
+#' `test.ambient = TRUE`).
+#'
+#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @param ... Arguments to pass to [hist.plot()].
+#'
+#' @returns Plot object.
+#'
+#' @export
+pvalue.plot <- function(ed.res, ...) {
+  data <- ed.res %>%
+    as.data.frame() %>%
+    dplyr::filter(Total <= metadata(ed.res)$lower & Total > 0)
+
+  plot <- hist.plot(
+    data,
+    x = PValue,
+    ...
+  )
   return(plot)
 }
 
@@ -410,73 +515,5 @@ multiplet.plot <- function(x, rd.res, projection = c("TSNE", "UMAP"), random.see
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
     ggplot2::labs(title = "Multiplets", x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_")) +
     ggplot2::theme_minimal()
-  return(plot)
-}
-
-
-#' Generate scatter plot
-#'
-#' Makes a scatter plot.
-#'
-#' @param data Data frame or object coercible to data frame.
-#' @param x Column in `data` to determine x position (categorical).
-#' @param y Column in `data` to determine y position (continuous).
-#' @param colour Column in `data` to determine colour.
-#' @param title Plot title.
-#' @param x.lab x-axis label.
-#' @param y.lab y-axis label.
-#' @param log Log-transform axis scales:
-#'  * `TRUE` to transform all axes
-#'  * Character vector with values 'x' and/or 'y' to transform specified axes
-#'
-#' @returns Plot object.
-#'
-#' @export
-scatter.plot <- function(data, x, y, colour, title = NULL, x.lab = NULL, y.lab = NULL, log = NULL) {
-  data <- data %>%
-    as.data.frame()
-
-  plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_point(mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, colour = {{ colour }}), size = 0.5) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526"), guide = "none") +
-    ggplot2::labs(title = title, x = x.lab, y = y.lab) +
-    ggplot2::theme_minimal()
-  if (!is.null(log)) {
-    if (is.logical(log) && log) log <- c("x", "y")
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
-  }
-  return(plot)
-}
-
-
-#' Generate violin/beeswarm plot
-#'
-#' Makes a combined violin plot and beeswarm plot.
-#'
-#' @inheritParams scatter.plot
-#' @param points Logical scalar (default `TRUE`). Add beeswarm points.
-#'
-#' @returns Plot object.
-#'
-#' @export
-violin.plot <- function(data, x, y, colour, points = TRUE, title = NULL, x.lab = NULL, y.lab = NULL, log = NULL) {
-  data <- data %>%
-    as.data.frame()
-
-  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }}, y = {{ y }})) +
-    ggplot2::geom_violin(colour = "grey50") +
-    ggplot2::labs(title = title, x = x.lab, y = y.lab) +
-    ggplot2::theme_minimal()
-  if (points) {
-    plot <- plot +
-      ggbeeswarm::geom_quasirandom(mapping = ggplot2::aes(colour = {{ colour }}), size = 0.5) +
-      ggplot2::scale_colour_manual(values = c("grey80", "#d82526"), guide = "none")
-  }
-  if (!is.null(log)) {
-    if (is.logical(log) && log) log <- "y"
-    if ("x" %in% log) stop("Unable to log transform categorical x-axis scale")
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
-  }
   return(plot)
 }

@@ -147,46 +147,58 @@ bc$gex <- colnames(sce[, !sce$discard | is.na(sce$discard)])
 
 ```{r gex-qc-library-size, eval=all(!is.null(params$gex_matrix), params$gex_filters$library_size)}
 cat("### Library size", "\n\n")
-violin.plot(
-  colData(sce),
-  x = Sample,
-  y = sum,
-  colour = low_lib_size,
-  title = "Low library size",
-  x.lab = "Sample",
-  y.lab = "Total UMI count",
-  log = TRUE
-) %>%
-  ggplotly(tooltip = c("y", "colour"))
+ggplotly(
+  violin.plot(
+    colData(sce),
+    x = Sample,
+    y = sum,
+    colour = low_lib_size,
+    size = 0.5,
+    title = "Low library size",
+    x.lab = "Sample",
+    y.lab = "Total UMI count",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r gex-qc-library-complexity, eval=all(!is.null(params$gex_matrix), params$gex_filters$library_complexity)}
 cat("### Library complexity", "\n\n")
-violin.plot(
-  colData(sce),
-  x = Sample,
-  y = detected,
-  colour = low_lib_complexity,
-  title = "Low library complexity",
-  x.lab = "Sample",
-  y.lab = "Total genes detected",
-  log = TRUE
-) %>%
-  ggplotly(tooltip = c("y", "colour"))
+ggplotly(
+  violin.plot(
+    colData(sce),
+    x = Sample,
+    y = detected,
+    colour = low_lib_complexity,
+    size = 0.5,
+    title = "Low library complexity",
+    x.lab = "Sample",
+    y.lab = "Total genes detected",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r gex-qc-mitochondrial-fraction, eval=all(!is.null(params$gex_matrix), params$gex_filters$mitochondrial_fraction)}
 cat("### Mitochondrial fraction", "\n\n")
-violin.plot(
-  colData(sce),
-  x = Sample,
-  y = subsets_mito_percent,
-  colour = high_mito_percent,
-  title = "High mitochondrial fraction",
-  x.lab = "Sample",
-  y.lab = "Percentage mitochondrial genes"
-) %>%
-  ggplotly(tooltip = c("y", "colour"))
+ggplotly(
+  violin.plot(
+    colData(sce),
+    x = Sample,
+    y = subsets_mito_percent,
+    colour = high_mito_percent,
+    size = 0.5,
+    title = "High mitochondrial fraction",
+    x.lab = "Sample",
+    y.lab = "Percentage mitochondrial genes"
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r gex-qc-diagnostics, eval=!is.null(params$gex_matrix)}
@@ -203,16 +215,20 @@ if (params$gex_filters$mitochondrial_fraction) {
   cat("  + **High mitochondrial fraction:**", sum(sce$high_mito_percent, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
-scatter.plot(
-  colData(sce),
-  x = sum,
-  y = subsets_mito_percent,
-  colour = discard,
-  title = "Cells excluded",
-  x.lab = "Total UMI count",
-  y.lab = "Percentage mitochondrial genes"
-) %>%
-  ggplotly(tooltip = c("x", "y", "colour"))
+ggplotly(
+  scatter.plot(
+    colData(sce),
+    x = sum,
+    y = subsets_mito_percent,
+    size = 0.5,
+    colour = discard,
+    title = "Cells excluded",
+    x.lab = "Total UMI count",
+    y.lab = "Percentage mitochondrial genes"
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("x", "y", "colour")
+)
 ```
 
 ```{r atac-qc-metrics, eval=!is.null(params$atac_matrix)}
@@ -240,7 +256,7 @@ if (params$atac_filters$peak_fraction) {
   rownames(fragments.count) <- fragments.count$CB
   seu$fragments <- fragments.count[colnames(seu), "frequency_count"]
   seu <- FRiP(seu, assay = "ATAC", total.fragments = "fragments")
-  qc$low_peak_fraction <- isOutlier(seu$FRiP, type = "lower", log = FALSE)
+  qc$low_peak_fraction <- isOutlier(seu$FRiP, type = "lower", log = TRUE)
 }
 if (params$atac_filters$blacklist_fraction) {
   seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
@@ -261,74 +277,95 @@ bc$atac <- colnames(seu[, !seu$discard | is.na(seu$discard)])
 
 ```{r atac-qc-peak-count, eval=all(!is.null(params$atac_matrix), params$atac_filters$peak_count)}
 cat("### Peak count", "\n\n")
-violin.plot(
-  seu[[]],
-  x = Sample,
-  y = sum,
-  colour = low_peak_count,
-  title = "Low total reads in peaks",
-  x.lab = "Sample",
-  y.lab = "Total reads in peaks",
-  log = TRUE
-) %>%
-  ggplotly()
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = Sample,
+    y = sum,
+    colour = low_peak_count,
+    size = 0.5,
+    title = "Low total reads in peaks",
+    x.lab = "Sample",
+    y.lab = "Total reads in peaks",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r atac-qc-peak-fraction, eval=all(!is.null(params$atac_matrix), params$atac_filters$peak_fraction)}
 cat("### Peak fraction", "\n\n")
-violin.plot(
-  seu[[]],
-  x = Sample,
-  y = FRiP,
-  colour = low_peak_fraction,
-  title = "Low fraction reads in peaks",
-  x.lab = "Sample",
-  y.lab = "Fraction reads in peaks"
-) %>%
-  ggplotly()
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = Sample,
+    y = FRiP * 100,
+    colour = low_peak_fraction,
+    size = 0.5,
+    title = "Low fraction reads in peaks",
+    x.lab = "Sample",
+    y.lab = "Percentage reads in peaks",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r atac-qc-blacklist-fraction, eval=all(!is.null(params$atac_matrix), params$atac_filters$blacklist_fraction)}
 cat("### Blacklist fraction", "\n\n")
-violin.plot(
-  seu[[]],
-  x = Sample,
-  y = blacklist_fraction,
-  colour = high_blacklist_fraction,
-  title = "High blacklist region reads",
-  x.lab = "Sample",
-  y.lab = "Fraction reads in genomic blacklist regions"
-) %>%
-  ggplotly()
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = Sample,
+    y = blacklist_fraction * 100,
+    colour = high_blacklist_fraction,
+    size = 0.5,
+    title = "High blacklist fraction",
+    x.lab = "Sample",
+    y.lab = "Percentage reads in genomic blacklist regions"
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r atac-qc-nucleosome-signal, eval=all(!is.null(params$atac_matrix), params$atac_filters$nucleosome_signal)}
 cat("### Nucleosome signal", "\n\n")
-violin.plot(
-  seu[[]],
-  x = Sample,
-  y = nucleosome_signal,
-  colour = high_nucleosome_signal,
-  title = "High nucleosome signal",
-  x.lab = "Sample",
-  y.lab = "Nucleosome signal"
-) %>%
-  ggplotly()
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = Sample,
+    y = nucleosome_signal,
+    colour = high_nucleosome_signal,
+    size = 0.5,
+    title = "High nucleosome signal",
+    x.lab = "Sample",
+    y.lab = "Nucleosome signal"
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r atac-qc-tss-enrichment, eval=all(!is.null(params$atac_matrix), params$atac_filters$tss_enrichment)}
 cat("### TSS enrichment", "\n\n")
-violin.plot(
-  seu[[]],
-  x = Sample,
-  y = TSS.enrichment,
-  colour = low_tss_enrichment,
-  title = "Low TSS enrichment score",
-  x.lab = "Sample",
-  y.lab = "TSS enrichment score",
-  log = TRUE
-) %>%
-  ggplotly()
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = Sample,
+    y = TSS.enrichment,
+    colour = low_tss_enrichment,
+    size = 0.5,
+    title = "Low TSS enrichment score",
+    x.lab = "Sample",
+    y.lab = "TSS enrichment score",
+    log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
 ```
 
 ```{r atac-qc-diagnostics, fig.width=10, fig.height=5, eval=!is.null(params$atac_matrix)}
@@ -386,28 +423,36 @@ bc$adt <- colnames(sce[, !sce$discard | is.na(sce$discard)])
 ```{r adt-ambient-contamination-isotype-control, eval=!is.null(params$adt_matrix)}
 if (is.null(params$adt_filters$isotype_control)) {
   cat("### Ambient contamination", "\n\n")
-  violin.plot(
-    colData(sce),
-    x = Sample,
-    y = ambient.scale,
-    colour = high.ambient,
-    title = "High ambient contamination",
-    x.lab = "Sample",
-    y.lab = "Relative ambient contamination"
-  ) %>%
-    ggplotly()
+  ggplotly(
+    violin.plot(
+      colData(sce),
+      x = Sample,
+      y = ambient.scale,
+      colour = high.ambient,
+      size = 0.5,
+      title = "High ambient contamination",
+      x.lab = "Sample",
+      y.lab = "Relative ambient contamination"
+    ) +
+      ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    tooltip = c("y", "colour")
+  )
 } else {
   cat("### Isotype control", "\n\n")
-  violin.plot(
-    colData(sce),
-    x = Sample,
-    y = sum.controls,
-    colour = high.controls,
-    title = "High non-specific binding",
-    x.lab = "Sample",
-    y.lab = "Total isotype control antibody count"
-  ) %>%
-    ggplotly()
+  ggplotly(
+    violin.plot(
+      colData(sce),
+      x = Sample,
+      y = sum.controls,
+      colour = high.controls,
+      size = 0.5,
+      title = "High non-specific binding",
+      x.lab = "Sample",
+      y.lab = "Total isotype control antibody count"
+    ) +
+      ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    tooltip = c("y", "colour")
+  )
 }
 ```
 
