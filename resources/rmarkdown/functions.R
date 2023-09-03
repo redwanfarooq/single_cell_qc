@@ -17,11 +17,17 @@
 #'
 #' @export
 update.params <- function(user, default = params) {
-  if (is(default, "list")) {
-    new <- vector("list", length(default)) %>% setNames(names(default))
-    for (x in names(default)) new[[x]] <- update.params(default[[x]], user[[x]])
-  } else {
-    if (!is.null(user)) new <- user else new <- default
+  new <- vector("list", length(default)) %>% setNames(names(default))
+  for (x in names(default)) {
+    if (x %in% names(user)) {
+      if (is.list(default[[x]])) {
+        new[[x]] <- update.params(user[[x]], default[[x]])
+      } else {
+        new[[x]] <- user[[x]]
+      }
+    } else {
+      new[[x]] <- default[[x]]
+    }
   }
   return(new)
 }
@@ -488,7 +494,7 @@ logcounts.plot <- function(matrix, features.pattern = "^[a-zA-Z]+_", pseudocount
 #' @returns Plot object.
 #'
 #' @export
-multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), dimred = NULL, random.seed = NULL) {
+multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.dimred = NULL, random.seed = NULL) {
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
 
   x <- add.cell.metadata(x, rd.res)
