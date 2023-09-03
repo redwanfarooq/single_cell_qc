@@ -63,7 +63,7 @@ if (exists("snakemake")) {
   source("functions.R")
   unlockBinding("params", .GlobalEnv)
   for (x in c("droplet_qc", "output", "gex_matrix", "atac_matrix", "adt_matrix")) {
-    params[[x]] <- sprintf(params[[x]], params$sample_id)
+    params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
   }
   lockBinding("params", .GlobalEnv)
 }

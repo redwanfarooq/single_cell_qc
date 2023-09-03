@@ -64,7 +64,7 @@ if (exists("snakemake")) {
   source("functions.R")
   unlockBinding("params", .GlobalEnv)
   for (x in c("output", "gex_matrix", "hto_matrix")) {
-    params[[x]] <- sprintf(params[[x]], params$sample_id)
+    params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
   }
   lockBinding("params", .GlobalEnv)
 }
@@ -265,7 +265,7 @@ ggplotly(
     projection = "TSNE",
     use.dimred = "PCA",
     random.seed = 100
-),
+  ),
   tooltip = "colour"
 )
 ```
