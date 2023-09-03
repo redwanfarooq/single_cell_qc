@@ -255,8 +255,8 @@ scatter.plot <- function(data, x, y, colour, ..., title = NULL, x.lab = NULL, y.
   data <- data %>%
     as.data.frame()
 
-  plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_point(mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, colour = {{ colour }}), ...) +
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, colour = {{ colour }})) +
+    ggplot2::geom_point(...) +
     ggplot2::labs(title = title, x = x.lab, y = y.lab, colour = colour.lab) +
     ggplot2::theme_minimal()
   if (!is.null(log)) {
@@ -346,8 +346,8 @@ bar.plot <- function(data, pos, fill = pos, ..., title = NULL, pos.lab = NULL, f
     dplyr::group_by({{ pos }}, {{ fill }}) %>%
     dplyr::summarise(count = dplyr::n())
 
-  plot <- ggplot2::ggplot(data = data) +
-    ggplot2::geom_col(mapping = ggplot2::aes(x = count, y = {{ pos }}, fill = {{ fill }}), ...) +
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = count, y = {{ pos }}, fill = {{ fill }})) +
+    ggplot2::geom_col(...) +
     ggplot2::scale_y_discrete(limits = rev) +
     ggplot2::labs(title = title, y = pos.lab, fill = fill.lab) +
     ggplot2::theme_minimal()
@@ -472,20 +472,23 @@ logcounts.plot <- function(matrix, features.pattern = "^[a-zA-Z]+_", pseudocount
 #' Makes tSNE/UMAP plot of known and predicted multiplets using the output of
 #' [scDblFinder::recoverDoublets()].
 #'
-#' @param x A SingleCellExperiment object containing precomputed PCA results in
-#'  a slot named 'PCA' in `reducedDims(x)`.
+#' @param x A SingleCellExperiment object.
 #' @param rd.res DataFrame output of [scDblFinder::recoverDoublets()].
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_point()].
 #' @param projection Character scalar. Determines type of projection used for
-#'  plotting cells (will be computed if not present in `x`):
+#'  plotting cells (will be computed if not present in `reducedDims(x)`):
 #'  * 'TSNE': Use t-SNE projection
 #'  * 'UMAP': Use UMAP projection
+#' @param use.dimred Character or integer scalar specifying existing dimensionality
+#'  reduction results to use for computing projection; only used if `projection`
+#'  not present in `reducedDims(x)`.
 #' @param random.seed Optional random seed for reproducibility of computed
 #'  projection.
 #'
 #' @returns Plot object.
 #'
 #' @export
-multiplet.plot <- function(x, rd.res, projection = c("TSNE", "UMAP"), random.seed = NULL) {
+multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), dimred = NULL, random.seed = NULL) {
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
 
   x <- add.cell.metadata(x, rd.res)
@@ -500,18 +503,17 @@ multiplet.plot <- function(x, rd.res, projection = c("TSNE", "UMAP"), random.see
     TRUE ~ "singlet"
   )
 
-  if (!"PCA" %in% names(reducedDims(x))) stop("x must contain precomputed PCA results in a slot named 'PCA' in reducedDims(x)")
   if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
     set.seed(random.seed)
     if (projection == "TSNE") {
-      x <- scater::runTSNE(x, dimred = "PCA")
+      x <- scater::runTSNE(x, dimred = use.dimred)
     } else if (projection == "UMAP") {
-      x <- scater::runUMAP(x, dimred = "PCA")
+      x <- scater::runUMAP(x, dimred = use.dimred)
     }
   }
 
   plot <- scater::ggcells(x, mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, colour = Type)) +
-    ggplot2::geom_point(size = 0.1) +
+    ggplot2::geom_point(...) +
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
     ggplot2::labs(title = "Multiplets", x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_")) +
     ggplot2::theme_minimal()

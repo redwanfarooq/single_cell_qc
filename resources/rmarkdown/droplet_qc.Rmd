@@ -261,9 +261,11 @@ ggplotly(
   multiplet.plot(
     sce,
     rd.res,
+    size = 0.1,
     projection = "TSNE",
+    use.dimred = "PCA",
     random.seed = 100
-  ),
+),
   tooltip = "colour"
 )
 ```
