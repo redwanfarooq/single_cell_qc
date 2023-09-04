@@ -17,6 +17,9 @@
 #'
 #' @export
 update.params <- function(user, default = params) {
+  if (!all(is.list(user), !is.null(names(user)))) stop("'user' must be a named list")
+  if (!all(is.list(default), !is.null(names(default)))) stop("'default' must be a named list")
+
   new <- vector("list", length(default)) %>% setNames(names(default))
   for (x in names(default)) {
     if (x %in% names(user)) {
@@ -29,6 +32,7 @@ update.params <- function(user, default = params) {
       new[[x]] <- default[[x]]
     }
   }
+
   return(new)
 }
 
@@ -50,6 +54,8 @@ update.params <- function(user, default = params) {
 #'
 #' @export
 get.10x.matrix <- function(file, cells = NULL, type = NULL, remove.suffix = FALSE) {
+  if (!file.exists(file)) stop(file, " does not exist")
+
   matrix <- Matrix::readMM(file) %>% as("CsparseMatrix")
   barcodes <- get.10x.barcodes(file.path(dirname(file), "barcodes.tsv.gz"), remove.suffix = remove.suffix)
   features <- get.10x.features(file.path(dirname(file), "features.tsv.gz"))
@@ -57,6 +63,7 @@ get.10x.matrix <- function(file, cells = NULL, type = NULL, remove.suffix = FALS
   rownames(matrix) <- rownames(features)
   if (!is.null(cells)) matrix <- matrix[, cells]
   if (!is.null(type)) matrix <- matrix[features$Type %in% type, ]
+
   return(matrix)
 }
 
@@ -72,6 +79,8 @@ get.10x.matrix <- function(file, cells = NULL, type = NULL, remove.suffix = FALS
 #'
 #' @export
 get.10x.barcodes <- function(file, remove.suffix = FALSE) {
+  if (!file.exists(file)) stop(file, " does not exist")
+
   df <- vroom::vroom(
     file,
     delim = "\t",
@@ -81,6 +90,7 @@ get.10x.barcodes <- function(file, remove.suffix = FALSE) {
     as.data.frame()
   if (remove.suffix) df$Barcode <- gsub(pattern = "-1$", replacement = "", df$Barcode)
   rownames(df) <- df$Barcode
+
   return(df)
 }
 
@@ -101,6 +111,8 @@ get.10x.barcodes <- function(file, remove.suffix = FALSE) {
 #'
 #' @export
 get.10x.features <- function(file, type = NULL) {
+  if (!file.exists(file)) stop(file, " does not exist")
+
   df <- vroom::vroom(
     file,
     delim = "\t",
@@ -110,6 +122,7 @@ get.10x.features <- function(file, type = NULL) {
     as.data.frame()
   rownames(df) <- df$ID
   if (!is.null(type)) df <- df[df$Type %in% type, ]
+
   return(df)
 }
 
@@ -133,6 +146,8 @@ get.10x.features <- function(file, type = NULL) {
 #'
 #' @export
 get.barcounter.matrix <- function(file, include.total = FALSE, cells = NULL, features.pattern = NULL, add.suffix = FALSE) {
+  if (!file.exists(file)) stop(file, " does not exist")
+
   matrix <- vroom::vroom(file, delim = ",", col_names = TRUE, show_col_types = FALSE) %>%
     tibble::column_to_rownames("cell_barcode") %>%
     as.matrix() %>%
@@ -141,6 +156,7 @@ get.barcounter.matrix <- function(file, include.total = FALSE, cells = NULL, fea
   if (!include.total) matrix <- matrix[-1, ]
   if (!is.null(cells)) matrix <- matrix[, cells]
   if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, rownames(matrix)), ]
+
   return(matrix)
 }
 
@@ -163,9 +179,8 @@ get.barcounter.matrix <- function(file, include.total = FALSE, cells = NULL, fea
 #'
 #' @export
 add.cell.metadata <- function(x, metadata, replace = c("matching", "all", "none")) {
-  replace <- match.arg(replace)
-
   if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+  replace <- match.arg(replace)
 
   if (is(x, "SingleCellExperiment")) {
     current <- SummarizedExperiment::colData(x)
@@ -189,6 +204,7 @@ add.cell.metadata <- function(x, metadata, replace = c("matching", "all", "none"
   } else if (is(x, "Seurat")) {
     x@meta.data <- new %>% as("data.frame")
   }
+
   return(x)
 }
 
@@ -206,9 +222,8 @@ add.cell.metadata <- function(x, metadata, replace = c("matching", "all", "none"
 #'
 #' @export
 add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matching", "all", "none")) {
-  replace <- match.arg(replace)
-
   if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+  replace <- match.arg(replace)
 
   if (is(x, "SingleCellExperiment")) {
     current <- SummarizedExperiment::rowData(x)
@@ -233,6 +248,7 @@ add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matchin
   } else if (is(x, "Seurat")) {
     x[[assay]]@meta.features <- new %>% as("data.frame")
   }
+
   return(x)
 }
 
@@ -246,10 +262,10 @@ add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matchin
 #' @param y Column in `data` to determine y position.
 #' @param colour Column in `data` to determine colour.
 #' @param ... Fixed aesthetics to pass to [ggplot2::geom_point()].
-#' @param title Plot title.
-#' @param x.lab x-axis label.
-#' @param y.lab y-axis label.
-#' @param colour.lab Colour legend label.
+#' @param title Character scalar specifying plot title.
+#' @param x.lab Character scalar specifying x-axis label.
+#' @param y.lab Character scalar specifying y-axis label.
+#' @param colour.lab Character scalar specifying colour legend label.
 #' @param log Log-transform axis scales:
 #'  * `TRUE` to transform all axes
 #'  * Character vector with values 'x' and/or 'y' to transform specified axes
@@ -270,6 +286,7 @@ scatter.plot <- function(data, x, y, colour, ..., title = NULL, x.lab = NULL, y.
     if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
     if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
   }
+
   return(plot)
 }
 
@@ -302,6 +319,7 @@ violin.plot <- function(data, x, y, colour, ..., points = TRUE, title = NULL, x.
     if ("x" %in% log) stop("Unable to log transform categorical x-axis scale")
     if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
   }
+
   return(plot)
 }
 
@@ -313,8 +331,8 @@ violin.plot <- function(data, x, y, colour, ..., points = TRUE, title = NULL, x.
 #' @param data Data frame or object coercible to data frame.
 #' @param x Column in `data` to determine x position.
 #' @param ... Fixed aesthetics to pass to [ggplot2::geom_histogram()].
-#' @param title Plot title.
-#' @param x.lab x-axis label.
+#' @param title Character scalar specifying plot title.
+#' @param x.lab Character scalar specifying x-axis label.
 #'
 #' @returns Plot object.
 #'
@@ -324,6 +342,7 @@ hist.plot <- function(data, x, ..., title = NULL, x.lab = NULL) {
     ggplot2::geom_histogram(...) +
     ggplot2::labs(title = title, x = x.lab) +
     ggplot2::theme_minimal()
+
   return(plot)
 }
 
@@ -336,9 +355,9 @@ hist.plot <- function(data, x, ..., title = NULL, x.lab = NULL) {
 #' @param pos Column in `data` to determine bar position.
 #' @param fill Column in `data` to determine bar fill.
 #' @param ... Fixed aesthetics to pass to [ggplot2::geom_col()].
-#' @param title Plot title.
-#' @param pos.lab Categorical axis label.
-#' @param fill.lab Fill legend label.
+#' @param title Character scalar specifying plot title.
+#' @param pos.lab Character scalar specifying categorical axis label.
+#' @param fill.lab Character scalar specifying fill legend label.
 #' @param log Log-transform axis scales:
 #'  * `TRUE` to transform all axes
 #'  * Character vector with values 'x' and/or 'y' to transform specified axes
@@ -362,6 +381,7 @@ bar.plot <- function(data, pos, fill = pos, ..., title = NULL, pos.lab = NULL, f
     if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
     if ("y" %in% log) stop("Unable to log transform categorical y-axis scale")
   }
+
   return(plot)
 }
 
@@ -393,6 +413,7 @@ bcrank.plot <- function(bcrank.res, ed.res, ...) {
     colour = fraction.cells,
     ...
   )
+
   return(plot)
 }
 
@@ -419,6 +440,7 @@ pvalue.plot <- function(ed.res, ...) {
     x = PValue,
     ...
   )
+
   return(plot)
 }
 
@@ -469,6 +491,7 @@ logcounts.plot <- function(matrix, features.pattern = "^[a-zA-Z]+_", pseudocount
     ggplot2::theme(
       strip.text = ggplot2::element_text(hjust = 0)
     )
+
   return(plot)
 }
 
@@ -523,5 +546,6 @@ multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.d
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
     ggplot2::labs(title = "Multiplets", x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_")) +
     ggplot2::theme_minimal()
+
   return(plot)
 }
