@@ -36,8 +36,9 @@ knitr::opts_chunk$set(
 )
 
 # Load packages
-library(plotly)
 library(dplyr)
+library(ggplot2)
+library(plotly)
 library(DropletUtils)
 library(demuxmix)
 library(scuttle)
@@ -151,7 +152,7 @@ ggplotly(
     colour.lab = "Fraction cells",
     log = TRUE
   ) +
-    ggplot2::scale_colour_gradient2(low = "#d82526", mid = "#ffc156", high = "#69b764", midpoint = 0.5)
+    scale_colour_gradient2(low = "#d82526", mid = "#ffc156", high = "#69b764", midpoint = 0.5)
 )
 ```
 

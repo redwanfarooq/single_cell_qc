@@ -3,6 +3,9 @@
 # ==============================
 
 
+`%>%` <- magrittr::`%>%` # explicitly define pipe operator
+
+
 #' Update R Markdown params list
 #'
 #' Recursively searches nested named list of default parameters for matching entries
