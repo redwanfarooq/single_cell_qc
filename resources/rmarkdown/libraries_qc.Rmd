@@ -35,8 +35,9 @@ knitr::opts_chunk$set(
 )
 
 # Load packages
-library(plotly)
 library(dplyr)
+library(ggplot2)
+library(plotly)
 library(DropletUtils)
 library(scuttle)
 library(scater)
@@ -159,7 +160,7 @@ ggplotly(
     y.lab = "Total UMI count",
     log = TRUE
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -178,7 +179,7 @@ ggplotly(
     y.lab = "Total genes detected",
     log = TRUE
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -196,7 +197,7 @@ ggplotly(
     x.lab = "Sample",
     y.lab = "Percentage mitochondrial genes"
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -226,7 +227,7 @@ ggplotly(
     x.lab = "Total UMI count",
     y.lab = "Percentage mitochondrial genes"
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("x", "y", "colour")
 )
 ```
@@ -289,7 +290,7 @@ ggplotly(
     y.lab = "Total reads in peaks",
     log = TRUE
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -308,7 +309,7 @@ ggplotly(
     y.lab = "Percentage reads in peaks",
     log = TRUE
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -326,7 +327,7 @@ ggplotly(
     x.lab = "Sample",
     y.lab = "Percentage reads in genomic blacklist regions"
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -344,7 +345,7 @@ ggplotly(
     x.lab = "Sample",
     y.lab = "Nucleosome signal"
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -363,7 +364,7 @@ ggplotly(
     y.lab = "TSS enrichment score",
     log = TRUE
   ) +
-    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+    scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
 )
 ```
@@ -434,7 +435,7 @@ if (is.null(params$adt_filters$isotype_control)) {
       x.lab = "Sample",
       y.lab = "Relative ambient contamination"
     ) +
-      ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+      scale_colour_manual(values = c("grey80", "#d82526")),
     tooltip = c("y", "colour")
   )
 } else {
@@ -450,7 +451,7 @@ if (is.null(params$adt_filters$isotype_control)) {
       x.lab = "Sample",
       y.lab = "Total isotype control antibody count"
     ) +
-      ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+      scale_colour_manual(values = c("grey80", "#d82526")),
     tooltip = c("y", "colour")
   )
 }
