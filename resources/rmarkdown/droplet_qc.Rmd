@@ -212,12 +212,29 @@ ggplotly(
 
 ```{r hto-demultiplexing-raw-hto-counts, fig.width=7, fig.height=length(wl)}
 cat("### Raw HTO counts", "\n\n")
-logcounts.plot(hto.mat, title = "Raw HTO counts")
+logcounts.plot(
+  hto.mat,
+  stat = "binline",
+  binwidth = 0.025,
+  scale = 0.95,
+  colour = NA,
+  fill = "#595959",
+  title = "Raw HTO counts"
+)
 ```
 
 ```{r hto-demultiplexing-demultiplexed-hto-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
 cat("### Demultiplexed HTO counts", "\n\n")
-logcounts.plot(hto.mat, samples = demux.res$Sample, title = "Demultiplexed HTO counts")
+logcounts.plot(
+  hto.mat,
+  samples = demux.res$Sample,
+  stat = "binline",
+  binwidth = 0.025,
+  scale = 0.95,
+  colour = NA,
+  show.legend = FALSE,
+  title = "Demultiplexed HTO counts"
+)
 ```
 
 ```{r hto-demultiplexing-diagnostics}
