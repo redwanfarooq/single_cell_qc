@@ -448,17 +448,23 @@ pvalue.plot <- function(ed.res, ...) {
 }
 
 
-#' Generate feature log-counts density ridge plots
+#' Generate feature log-counts distribution plots
 #'
-#' Makes log-count density ridge plots for selected features, optionally
+#' Makes log-counts distribution plots for selected features, optionally
 #' grouping by sample.
 #'
 #' @param matrix Matrix or matrix-like object containing counts with
 #'  features as row names.
-#' @param features.pattern Regular expression string to select features for
-#'  plotting.
-#' @param pseudocount Integer (default 1). Added to counts before log
+#' @param ... Fixed aesthetics to pass to [ggridges::geom_density_ridges()].
+#' @param features.pattern Character vector of regular expressions to select
+#'  features for plotting.
+#' @param pseudocount Numeric scalar (default 1). Added to counts before log
 #'  transformation (to avoid infinite values).
+#' @param x.lower Numeric scalar (default 1). Lower limit of x-axis scale
+#'  (choose a value greater than 0 to avoid loss of resolution due to inflated
+#'  counts close to zero; set to `NA` to use ggplot2 default).
+#' @param x.upper Numeric scalar (default maximum log-count in `matrix`).
+#'  Upper limit of x-axis scale (set to `NA` for to use ggplot2 default).
 #' @param samples Character vector of the same length as number of
 #'  cells specifying sample of origin. If specified, will group by sample.
 #' @param title Plot title.
@@ -466,30 +472,38 @@ pvalue.plot <- function(ed.res, ...) {
 #' @returns Plot object.
 #'
 #' @export
-logcounts.plot <- function(matrix, features.pattern = "^[a-zA-Z]+_", pseudocount = 1, samples = NULL, title = NULL) {
+logcounts.plot <- function(matrix, ..., features.pattern = "^[a-zA-Z]+_", pseudocount = 1, x.lower = 1, x.upper = max(log10(matrix + pseudocount)), samples = NULL, title = NULL) {
   data <- matrix %>%
     t() %>%
     as.data.frame() %>%
     dplyr::mutate(across(everything(), ~ log10(.x + pseudocount)))
-  if (!is.null(samples)) data <- dplyr::bind_cols(data, sample = samples)
+  if (!is.null(samples)) data <- dplyr::bind_cols(data, Sample = samples)
   data <- tidyr::pivot_longer(data, cols = matches(features.pattern), names_to = "Feature", values_to = "count")
 
   plot <- ggplot2::ggplot(data = data)
   if (is.null(samples)) {
     plot <- plot +
-      ggridges::geom_density_ridges(mapping = ggplot2::aes(x = count, y = Feature), fill = "grey80", show.legend = FALSE)
+      ggridges::geom_density_ridges(
+        mapping = ggplot2::aes(x = count, y = Feature),
+        ...
+      )
   } else {
     plot <- plot +
       ggridges::geom_density_ridges(
-        mapping = ggplot2::aes(x = count, y = sample, fill = sample),
-        show.legend = FALSE
+        mapping = ggplot2::aes(x = count, y = Sample, fill = Sample),
+        ...
       ) +
-      ggplot2::facet_wrap(~Feature, scales = "free_x", ncol = 2)
+      ggplot2::facet_wrap(
+        ~Feature,
+        scales = "free_x",
+        ncol = 2,
+        labeller = "label_both"
+      )
   }
   plot <- plot +
     ggplot2::scale_y_discrete(limits = rev) +
-    ggplot2::xlim(1, NA) +
-    ggplot2::labs(title = title, x = sprintf("log10(UMI count + %d)", pseudocount), y = "density") +
+    ggplot2::xlim(x.lower, x.upper) +
+    ggplot2::labs(title = title, x = sprintf("log10(UMI count + %d)", pseudocount), y = ifelse(is.null(samples), "Feature", "Sample")) +
     ggplot2::theme_minimal() +
     ggplot2::theme(
       strip.text = ggplot2::element_text(hjust = 0)
