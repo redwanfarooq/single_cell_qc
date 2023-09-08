@@ -62,12 +62,15 @@ if (exists("snakemake")) {
 } else {
   # if running in isolation
   source("functions.R")
-  unlockBinding("params", .GlobalEnv)
-  for (x in c("droplet_qc", "output", "gex_matrix", "atac_matrix", "adt_matrix")) {
-    params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
-  }
-  lockBinding("params", .GlobalEnv)
 }
+
+# Replace path placeholders
+unlockBinding("params", .GlobalEnv)
+for (x in c("droplet_qc", "output", "gex_matrix", "atac_matrix", "adt_matrix")) {
+  params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
+  if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
+}
+lockBinding("params", .GlobalEnv)
 
 # Check for missing required params
 required <- c(
@@ -103,7 +106,7 @@ droplet.qc.res <- vroom::vroom(
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  mutate(Sample = factor(Sample, levels = sort(unique(Sample)), ordered = TRUE)) %>%
+  mutate(Sample = factor(Sample)) %>%
   as.data.frame()
 rownames(droplet.qc.res) <- droplet.qc.res$Barcode
 ```

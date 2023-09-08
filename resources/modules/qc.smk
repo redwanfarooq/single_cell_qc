@@ -21,12 +21,15 @@ for key, value in parse_info(info).items():
 # Import rules
 include: 'rules/droplet_qc.smk'
 include: 'rules/libraries_qc.smk'
-dirs = ['droplet_qc', 'libraries_qc']
+include: 'rules/batch_correction.smk'
+
+# Set targets
+targets = [x for rule in [droplet_qc, libraries_qc, batch_correction] for x in rule]
 # --------------------------------------------------
 
 
 # --------------------------------------------------
 # RULES
 rule all:
-	input: expand("{path}/{dir}/{sample}.html", path=[config["output_dir"]["reports"]], dir=dirs, sample=samples)
+	input: [os.path.abspath(x) for x in targets]
 # --------------------------------------------------

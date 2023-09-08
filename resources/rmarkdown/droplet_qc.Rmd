@@ -63,12 +63,15 @@ if (exists("snakemake")) {
 } else {
   # if running in isolation
   source("functions.R")
-  unlockBinding("params", .GlobalEnv)
-  for (x in c("output", "gex_matrix", "hto_matrix")) {
-    params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
-  }
-  lockBinding("params", .GlobalEnv)
 }
+
+# Replace path placeholders
+unlockBinding("params", .GlobalEnv)
+for (x in c("output", "gex_matrix", "hto_matrix")) {
+  params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
+  if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
+}
+lockBinding("params", .GlobalEnv)
 
 # Check for missing required params
 required <- c(
@@ -297,7 +300,6 @@ out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
   mutate(
     Donor = stringr::str_split_i(params$sample_id, pattern = "-", i = 1),
     Hash = stringr::str_split_i(params$sample_id, pattern = "-", i = 2),
-    Batch = paste(Donor, Hash, sep = "-"),
     Sample = sapply(Sample, function(x) md[[x]]$sample)
   )
 if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)
