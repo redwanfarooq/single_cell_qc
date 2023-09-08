@@ -467,7 +467,7 @@ pvalue.plot <- function(ed.res, ...) {
 #'  Upper limit of x-axis scale (set to `NA` for to use ggplot2 default).
 #' @param samples Character vector of the same length as number of
 #'  cells specifying sample of origin. If specified, will group by sample.
-#' @param title Plot title.
+#' @param title Character scalar specifying plot title.
 #'
 #' @returns Plot object.
 #'
@@ -538,17 +538,13 @@ multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.d
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
 
   x <- add.cell.metadata(x, rd.res)
-
-  projection <- match.arg(projection)
-  var.x <- rlang::sym(paste(projection, "1", sep = "."))
-  var.y <- rlang::sym(paste(projection, "2", sep = "."))
-
   x$Type <- dplyr::case_when(
     x$known ~ "known",
     x$predicted ~ "predicted",
     TRUE ~ "singlet"
   )
 
+  projection <- match.arg(projection)
   if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
     set.seed(random.seed)
     if (projection == "TSNE") {
@@ -558,10 +554,72 @@ multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.d
     }
   }
 
+  var.x <- rlang::sym(paste(projection, "1", sep = "."))
+  var.y <- rlang::sym(paste(projection, "2", sep = "."))
   plot <- scater::ggcells(x, mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, colour = Type)) +
     ggplot2::geom_point(...) +
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
     ggplot2::labs(title = "Multiplets", x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_")) +
+    ggplot2::theme_minimal()
+
+  return(plot)
+}
+
+#' Generate tSNE/UMAP plot of batch corrected cells
+#'
+#' Makes tSNE/UMAP plot of batch corrected cells using the output of
+#' [batchelor::correctExperiments()].
+#'
+#' @inheritParams multiplet.plot
+#' @param x SingleCellExperiment object output of
+#'  [batchelor::correctExperiments()].
+#' @param control Character scalar specifying name of control sample (i.e. a
+#'  cross-batch technical replicate).
+#' @param assay.type Character or integer scalar specifying which assay in `x`
+#'  contains log-normalised expression values; only used if existing dimensionality
+#'  reduction results not present in `reducedDims(x)`.
+#' @param n.cells Integer scalar (default 5000). Specifies number of cells to
+#'  plot; if `x` contains more cells, will randomly downsample to `n.cells`.
+#'  Useful for reducing overplotting and reducing size of interactive plots. Set
+#'  to `Inf` to force plotting all cells in `x`.
+#' @param title Character scalar specifying plot title.
+#'
+#' @returns Plot object.
+#'
+#' @export
+batch.plot <- function(x, ..., control = NULL, assay.type = c("merged", "corrected"), projection = c("TSNE", "UMAP"), use.dimred = c("PCA", "corrected"), n.cells = 5000, random.seed = NULL, title = NULL) {
+  if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
+
+  if (is.null(control)) {
+    x$control <- FALSE
+  } else {
+    x$control <- ifelse(x$Sample == control, TRUE, FALSE)
+  }
+
+  if (length(reducedDims(x)) == 0) {
+    set.seed(random.seed)
+    if (!is.integer(assay.type)) assay.type <- match.arg(assayNames(x)[1], choices = assay.type)
+    dec <- modelGeneVar(x, assay.type = "logcounts", block = x$batch)
+    hvg <- getTopHVGs(dec, n = 5000)
+    x <- scater::runPCA(x, assay.type = assay.type, subset_row = hvg)
+  }
+
+  if (!is.integer(use.dimred)) use.dimred <- match.arg(reducedDimNames(x), choices = use.dimred)
+  projection <- match.arg(projection)
+  if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
+    set.seed(random.seed)
+    if (projection == "TSNE") {
+      x <- scater::runTSNE(x, dimred = use.dimred)
+    } else if (projection == "UMAP") {
+      x <- scater::runUMAP(x, dimred = use.dimred)
+    }
+  }
+
+  var.x <- rlang::sym(paste(projection, "1", sep = "."))
+  var.y <- rlang::sym(paste(projection, "2", sep = "."))
+  plot <- scater::ggcells(x[, sample(seq_len(ncol(x)), min(n.cells, ncol(x)))], mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, fill = batch, colour = control)) +
+    ggplot2::geom_point(...) +
+    ggplot2::labs(title = title, x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_"), fill = "Batch", colour = "Control") +
     ggplot2::theme_minimal()
 
   return(plot)
