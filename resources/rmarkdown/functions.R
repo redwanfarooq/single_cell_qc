@@ -56,7 +56,10 @@ update.params <- function(user, default = params) {
 #'  as column names.
 #'
 #' @export
-get.10x.matrix <- function(file, cells = NULL, type = NULL, remove.suffix = FALSE) {
+get.10x.matrix <- function(file,
+                           cells = NULL,
+                           type = NULL,
+                           remove.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
   matrix <- Matrix::readMM(file) %>% as("CsparseMatrix")
@@ -148,7 +151,11 @@ get.10x.features <- function(file, type = NULL) {
 #'  as column names.
 #'
 #' @export
-get.barcounter.matrix <- function(file, include.total = FALSE, cells = NULL, features.pattern = NULL, add.suffix = FALSE) {
+get.barcounter.matrix <- function(file,
+                                  include.total = FALSE,
+                                  cells = NULL,
+                                  features.pattern = NULL,
+                                  add.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
   matrix <- vroom::vroom(file, delim = ",", col_names = TRUE, show_col_types = FALSE) %>%
@@ -181,8 +188,12 @@ get.barcounter.matrix <- function(file, include.total = FALSE, cells = NULL, fea
 #' @returns An object of the same class as `x` with updated cell metadata.
 #'
 #' @export
-add.cell.metadata <- function(x, metadata, replace = c("matching", "all", "none")) {
-  if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+add.cell.metadata <- function(x,
+                              metadata,
+                              replace = c("matching", "all", "none")) {
+  if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) {
+    stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+  }
   replace <- match.arg(replace)
 
   if (is(x, "SingleCellExperiment")) {
@@ -224,8 +235,13 @@ add.cell.metadata <- function(x, metadata, replace = c("matching", "all", "none"
 #' @returns An object of the same class as `x` with updated feature metadata.
 #'
 #' @export
-add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matching", "all", "none")) {
-  if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+add.feature.metadata <- function(x,
+                                 metadata,
+                                 assay = NULL,
+                                 replace = c("matching", "all", "none")) {
+  if (!any(is(x, "SingleCellExperiment"), is(x, "Seurat"))) {
+    stop("x must be an object of class 'SingleCellExperiment' or 'Seurat'")
+  }
   replace <- match.arg(replace)
 
   if (is(x, "SingleCellExperiment")) {
@@ -276,7 +292,16 @@ add.feature.metadata <- function(x, metadata, assay = NULL, replace = c("matchin
 #' @returns Plot object.
 #'
 #' @export
-scatter.plot <- function(data, x, y, colour, ..., title = NULL, x.lab = NULL, y.lab = NULL, colour.lab = NULL, log = NULL) {
+scatter.plot <- function(data,
+                         x,
+                         y,
+                         colour,
+                         ...,
+                         title = NULL,
+                         x.lab = NULL,
+                         y.lab = NULL,
+                         colour.lab = NULL,
+                         log = NULL) {
   data <- data %>%
     as.data.frame()
 
@@ -305,7 +330,17 @@ scatter.plot <- function(data, x, y, colour, ..., title = NULL, x.lab = NULL, y.
 #' @returns Plot object.
 #'
 #' @export
-violin.plot <- function(data, x, y, colour, ..., points = TRUE, title = NULL, x.lab = NULL, y.lab = NULL, colour.lab = NULL, log = NULL) {
+violin.plot <- function(data,
+                        x,
+                        y,
+                        colour,
+                        ...,
+                        points = TRUE,
+                        title = NULL,
+                        x.lab = NULL,
+                        y.lab = NULL,
+                        colour.lab = NULL,
+                        log = NULL) {
   data <- data %>%
     as.data.frame()
 
@@ -340,7 +375,11 @@ violin.plot <- function(data, x, y, colour, ..., points = TRUE, title = NULL, x.
 #' @returns Plot object.
 #'
 #' @export
-hist.plot <- function(data, x, ..., title = NULL, x.lab = NULL) {
+hist.plot <- function(data,
+                      x,
+                      ...,
+                      title = NULL,
+                      x.lab = NULL) {
   plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }})) +
     ggplot2::geom_histogram(...) +
     ggplot2::labs(title = title, x = x.lab) +
@@ -368,7 +407,14 @@ hist.plot <- function(data, x, ..., title = NULL, x.lab = NULL) {
 #' @returns Plot object.
 #'
 #' @export
-bar.plot <- function(data, pos, fill = pos, ..., title = NULL, pos.lab = NULL, fill.lab = NULL, log = NULL) {
+bar.plot <- function(data,
+                     pos,
+                     fill = pos,
+                     ...,
+                     title = NULL,
+                     pos.lab = NULL,
+                     fill.lab = NULL,
+                     log = NULL) {
   data <- data %>%
     as.data.frame() %>%
     dplyr::group_by({{ pos }}, {{ fill }}) %>%
@@ -472,7 +518,14 @@ pvalue.plot <- function(ed.res, ...) {
 #' @returns Plot object.
 #'
 #' @export
-logcounts.plot <- function(matrix, ..., features.pattern = "^[a-zA-Z]+_", pseudocount = 1, x.lower = 1, x.upper = max(log10(matrix + pseudocount)), samples = NULL, title = NULL) {
+logcounts.plot <- function(matrix,
+                           ...,
+                           features.pattern = "^[a-zA-Z]+_",
+                           pseudocount = 1,
+                           x.lower = 1,
+                           x.upper = max(log10(matrix + pseudocount)),
+                           samples = NULL,
+                           title = NULL) {
   data <- matrix %>%
     t() %>%
     as.data.frame() %>%
@@ -482,32 +535,22 @@ logcounts.plot <- function(matrix, ..., features.pattern = "^[a-zA-Z]+_", pseudo
 
   plot <- ggplot2::ggplot(data = data)
   if (is.null(samples)) {
-    plot <- plot +
-      ggridges::geom_density_ridges(
-        mapping = ggplot2::aes(x = count, y = Feature),
-        ...
-      )
+    plot <- plot + ggridges::geom_density_ridges(mapping = ggplot2::aes(x = count, y = Feature), ...)
   } else {
     plot <- plot +
-      ggridges::geom_density_ridges(
-        mapping = ggplot2::aes(x = count, y = Sample, fill = Sample),
-        ...
-      ) +
-      ggplot2::facet_wrap(
-        ~Feature,
-        scales = "free_x",
-        ncol = 2,
-        labeller = "label_both"
-      )
+      ggridges::geom_density_ridges(mapping = ggplot2::aes(x = count, y = Sample, fill = Sample), ...) +
+      ggplot2::facet_wrap(~Feature, scales = "free_x", ncol = 2, labeller = "label_both")
   }
   plot <- plot +
     ggplot2::scale_y_discrete(limits = rev) +
     ggplot2::xlim(x.lower, x.upper) +
-    ggplot2::labs(title = title, x = sprintf("log10(UMI count + %d)", pseudocount), y = ifelse(is.null(samples), "Feature", "Sample")) +
+    ggplot2::labs(
+      title = title,
+      x = sprintf("log10(UMI count + %d)", pseudocount),
+      y = ifelse(is.null(samples), "Feature", "Sample")
+    ) +
     ggplot2::theme_minimal() +
-    ggplot2::theme(
-      strip.text = ggplot2::element_text(hjust = 0)
-    )
+    ggplot2::theme(strip.text = ggplot2::element_text(hjust = 0))
 
   return(plot)
 }
@@ -534,7 +577,12 @@ logcounts.plot <- function(matrix, ..., features.pattern = "^[a-zA-Z]+_", pseudo
 #' @returns Plot object.
 #'
 #' @export
-multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.dimred = NULL, random.seed = NULL) {
+multiplet.plot <- function(x,
+                           rd.res,
+                           ...,
+                           projection = c("TSNE", "UMAP"),
+                           use.dimred = NULL,
+                           random.seed = NULL) {
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
 
   x <- add.cell.metadata(x, rd.res)
@@ -587,7 +635,15 @@ multiplet.plot <- function(x, rd.res, ..., projection = c("TSNE", "UMAP"), use.d
 #' @returns Plot object.
 #'
 #' @export
-batch.plot <- function(x, ..., control = NULL, assay.type = c("merged", "corrected"), projection = c("TSNE", "UMAP"), use.dimred = c("PCA", "corrected"), n.cells = 5000, random.seed = NULL, title = NULL) {
+batch.plot <- function(x,
+                       ...,
+                       control = NULL,
+                       assay.type = c("merged", "corrected"),
+                       projection = c("TSNE", "UMAP"),
+                       use.dimred = c("PCA", "corrected"),
+                       n.cells = 5000,
+                       random.seed = NULL,
+                       title = NULL) {
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
 
   if (is.null(control)) {
@@ -596,15 +652,15 @@ batch.plot <- function(x, ..., control = NULL, assay.type = c("merged", "correct
     x$control <- ifelse(x$Sample == control, TRUE, FALSE)
   }
 
-  if (length(reducedDims(x)) == 0) {
+  if (length(SingleCellExperiment::reducedDims(x)) == 0) {
     set.seed(random.seed)
-    if (!is.integer(assay.type)) assay.type <- match.arg(assayNames(x)[1], choices = assay.type)
-    dec <- modelGeneVar(x, assay.type = "logcounts", block = x$batch)
-    hvg <- getTopHVGs(dec, n = 5000)
+    if (!is.integer(assay.type)) assay.type <- match.arg(SummarizedExperiment::assayNames(x)[1], choices = assay.type)
+    dec <- scran::modelGeneVar(x, assay.type = "logcounts", block = x$batch)
+    hvg <- scran::getTopHVGs(dec, n = 5000)
     x <- scater::runPCA(x, assay.type = assay.type, subset_row = hvg)
   }
 
-  if (!is.integer(use.dimred)) use.dimred <- match.arg(reducedDimNames(x), choices = use.dimred)
+  if (!is.integer(use.dimred)) use.dimred <- match.arg(SingleCellExperiment::reducedDimNames(x), choices = use.dimred)
   projection <- match.arg(projection)
   if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
     set.seed(random.seed)
@@ -617,9 +673,18 @@ batch.plot <- function(x, ..., control = NULL, assay.type = c("merged", "correct
 
   var.x <- rlang::sym(paste(projection, "1", sep = "."))
   var.y <- rlang::sym(paste(projection, "2", sep = "."))
-  plot <- scater::ggcells(x[, sample(seq_len(ncol(x)), min(n.cells, ncol(x)))], mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, fill = batch, colour = control)) +
+  plot <- scater::ggcells(
+    x[, sample(seq_len(ncol(x)), min(n.cells, ncol(x)))],
+    mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, fill = batch, colour = control)
+  ) +
     ggplot2::geom_point(...) +
-    ggplot2::labs(title = title, x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_"), fill = "Batch", colour = "Control") +
+    ggplot2::labs(
+      title = title,
+      x = paste(projection, "1", sep = "_"),
+      y = paste(projection, "2", sep = "_"),
+      fill = "Batch",
+      colour = "Control"
+    ) +
     ggplot2::theme_minimal()
 
   return(plot)
