@@ -213,31 +213,14 @@ ggplotly(
 )
 ```
 
-```{r hto-demultiplexing-raw-hto-counts, fig.width=7, fig.height=length(wl)}
-cat("### Raw HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  stat = "binline",
-  binwidth = 0.025,
-  scale = 0.95,
-  colour = NA,
-  fill = "#595959",
-  title = "Raw HTO counts"
-)
-```
-
-```{r hto-demultiplexing-demultiplexed-hto-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
-cat("### Demultiplexed HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  samples = demux.res$Sample,
-  stat = "binline",
-  binwidth = 0.025,
-  scale = 0.95,
-  colour = NA,
-  show.legend = FALSE,
-  title = "Demultiplexed HTO counts"
-)
+```{r hto-demultiplexing-mixture-components, fig.width=7, fig.height=2.5}
+cat("### Mixture components", "\n\n")
+for (x in wl) {
+  plot <- plotDmmHistogram(dmm, hto = x) +
+    labs(title = x, x = "UMI count") +
+    theme_minimal()
+  print(plot)
+}
 ```
 
 ```{r hto-demultiplexing-diagnostics}
@@ -246,6 +229,8 @@ cat("* **Mode:**", params$demuxmix_model, "\n")
 cat("* **Chosen model:**", "\n")
 cat(sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n"), "\n")
 cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(2), paste0("(", params$demuxmix_pAcpt %>% round(2), " per HTO)"), "\n")
+cat("* **Fraction overlap between mixture components:**", "\n")
+cat(sprintf(" + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(collapse = "\n"), "\n")
 ```
 
 ```{r multiplet-calling}
