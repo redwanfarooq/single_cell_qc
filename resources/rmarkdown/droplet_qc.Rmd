@@ -230,7 +230,7 @@ cat("* **Chosen model:**", "\n")
 cat(sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n"), "\n")
 cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(2), paste0("(", params$demuxmix_pAcpt %>% round(2), " per HTO)"), "\n")
 cat("* **Fraction overlap between mixture components:**", "\n")
-cat(sprintf(" + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(collapse = "\n"), "\n")
+cat(sprintf("  + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(collapse = "\n"), "\n")
 ```
 
 ```{r multiplet-calling}

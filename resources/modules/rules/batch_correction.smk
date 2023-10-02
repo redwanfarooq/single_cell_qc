@@ -1,5 +1,5 @@
 ##########################################################################################
-# Snakemake rule for libraries QC
+# Snakemake rule for batch correction
 # Author: Redwan Farooq
 # Requires functions from resources/scripts/rule.py
 # Requires outputs from resources/rules/droplet_qc.smk
@@ -17,11 +17,11 @@ rule batch_correction:
     params:
         path = rmd_dir if os.path.isabs(rmd_dir) else os.path.join(workflow.basedir, rmd_dir),
         sample_id = samples,
-        droplet_qc = os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv"),
-        libraries_qc = os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}.csv"),
+        droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv"),
+        libraries_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}.csv"),
         output_dir = os.path.join(config["output_dir"]["data"], "batch_correction"),
-        gex_matrix = config.get("gex_matrix", None),
-        adt_matrix = config.get("adt_matrix", None),
+        gex_matrix = lambda wildcards: config.get("gex_matrix", None),
+        adt_matrix = lambda wildcards: config.get("adt_matrix", None),
         adt_filters = config.get("adt_filters", None),
         control = config.get("control", None),
         correction_method = config.get("correction_method", None),
