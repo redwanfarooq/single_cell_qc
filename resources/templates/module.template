@@ -20,12 +20,14 @@ for key, value in parse_info(info).items():
 
 # Import rules
 $LOAD
-dirs = [$RULES]
+
+# Set targets
+targets = [x for rule in [$RULES] for x in rule]
 # --------------------------------------------------
 
 
 # --------------------------------------------------
 # RULES
 rule all:
-	input: expand("{path}/{dir}/{sample}.html", path=[config["output_dir"]["reports"]], dir=dirs, sample=samples)
+	input: [os.path.abspath(x) for x in targets]
 # --------------------------------------------------

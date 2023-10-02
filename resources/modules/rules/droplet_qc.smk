@@ -14,9 +14,9 @@ rule droplet_qc:
     params:
         path = rmd_dir if os.path.isabs(rmd_dir) else os.path.join(workflow.basedir, rmd_dir),
         metadata = lambda wildcards: get_hto_metadata(wildcards, info=info),
-        gex_matrix = lambda wildcards: get_path(wildcards, config["gex_matrix"]),
-        hto_matrix = lambda wildcards: get_path(wildcards, config["hto_matrix"]),
-        output = lambda wildcards: get_path(wildcards, os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv")),
+        gex_matrix = config["gex_matrix"],
+        hto_matrix = config["hto_matrix"],
+        output = os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv"),
         emptydrops_lower = config.get("emptydrops_lower", None),
         emptydrops_niters = config.get("emptydrops_niters", None),
         demuxmix_model = config.get("demuxmix_model", None),
@@ -26,3 +26,5 @@ rule droplet_qc:
     envmodules: "R-cbrg"
     message: "Running droplet processing QC for {wildcards.sample}"
     script: "{params.path}/droplet_qc.Rmd"
+
+droplet_qc = expand("{path}/droplet_qc/{sample}.html", path=[config["output_dir"]["reports"]], sample=samples)

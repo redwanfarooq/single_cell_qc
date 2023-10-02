@@ -11,3 +11,4 @@
 qc:
   - droplet_qc
   - libraries_qc
+  - batch_correction

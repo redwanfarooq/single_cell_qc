@@ -63,12 +63,15 @@ if (exists("snakemake")) {
 } else {
   # if running in isolation
   source("functions.R")
-  unlockBinding("params", .GlobalEnv)
-  for (x in c("output", "gex_matrix", "hto_matrix")) {
-    params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
-  }
-  lockBinding("params", .GlobalEnv)
 }
+
+# Replace path placeholders
+unlockBinding("params", .GlobalEnv)
+for (x in c("output", "gex_matrix", "hto_matrix")) {
+  params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
+  if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
+}
+lockBinding("params", .GlobalEnv)
 
 # Check for missing required params
 required <- c(
@@ -210,31 +213,14 @@ ggplotly(
 )
 ```
 
-```{r hto-demultiplexing-raw-hto-counts, fig.width=7, fig.height=length(wl)}
-cat("### Raw HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  stat = "binline",
-  binwidth = 0.025,
-  scale = 0.95,
-  colour = NA,
-  fill = "#595959",
-  title = "Raw HTO counts"
-)
-```
-
-```{r hto-demultiplexing-demultiplexed-hto-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
-cat("### Demultiplexed HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  samples = demux.res$Sample,
-  stat = "binline",
-  binwidth = 0.025,
-  scale = 0.95,
-  colour = NA,
-  show.legend = FALSE,
-  title = "Demultiplexed HTO counts"
-)
+```{r hto-demultiplexing-mixture-components, fig.width=7, fig.height=2.5}
+cat("### Mixture components", "\n\n")
+for (x in wl) {
+  plot <- plotDmmHistogram(dmm, hto = x) +
+    labs(title = x, x = "UMI count") +
+    theme_minimal()
+  print(plot)
+}
 ```
 
 ```{r hto-demultiplexing-diagnostics}
@@ -243,6 +229,8 @@ cat("* **Mode:**", params$demuxmix_model, "\n")
 cat("* **Chosen model:**", "\n")
 cat(sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n"), "\n")
 cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(2), paste0("(", params$demuxmix_pAcpt %>% round(2), " per HTO)"), "\n")
+cat("* **Fraction overlap between mixture components:**", "\n")
+cat(sprintf(" + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(collapse = "\n"), "\n")
 ```
 
 ```{r multiplet-calling}
@@ -297,7 +285,6 @@ out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
   mutate(
     Donor = stringr::str_split_i(params$sample_id, pattern = "-", i = 1),
     Hash = stringr::str_split_i(params$sample_id, pattern = "-", i = 2),
-    Batch = paste(Donor, Hash, sep = "-"),
     Sample = sapply(Sample, function(x) md[[x]]$sample)
   )
 if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)

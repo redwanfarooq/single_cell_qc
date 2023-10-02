@@ -83,3 +83,10 @@ atac_filters:
   tss_enrichment: true # default: true
 adt_filters:
   isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
+# batch_correction.Rmd
+control: null #default: null; control sample (i.e. cross-batch technical replicate)
+correction_method: # default: all; options: none, rescale, fastmnn (case-sensitive)
+  - none
+  - rescale
+  - fastmnn
+correction_projection: TSNE # default: TSNE; options: TSNE, UMAP (case-sensitive)

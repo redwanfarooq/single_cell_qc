@@ -43,7 +43,7 @@ Options:
 # GLOBAL VARIABLES
 # ==============================
 LOAD = "include: 'rules/{}.smk'"
-RULES = "'{}'"
+RULES = "{}"
 
 
 # ==============================
