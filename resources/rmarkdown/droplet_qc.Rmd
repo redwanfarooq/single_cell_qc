@@ -109,6 +109,7 @@ md <- yaml::yaml.load(params$metadata)
 ```{r load-gex-matrix}
 cat("* **GEX matrix:**", params$gex_matrix, "\n")
 gex.mat <- get.10x.matrix(params$gex_matrix, type = "Gene Expression")
+gex.mat <- gex.mat[, colSums(gex.mat) > 0] # remove cell barcodes with zero counts
 ```
 
 ```{r load-hto-matrix}
@@ -116,7 +117,7 @@ cat("* **HTO matrix:**", params$hto_matrix, "\n")
 if (params$hto_matrix == params$gex_matrix) {
   hto.mat <- get.10x.matrix(params$hto_matrix, type = "Antibody Capture")
 } else {
-  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_", add.suffix = TRUE)
+  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_", add.suffix = grepl(pattern = "-1$", colnames(gex.mat)[1]))
 }
 wl <- names(md)
 hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
@@ -136,7 +137,9 @@ ed.stats <- list(
 )
 bcrank.res <- barcodeRanks(gex.mat)
 gex.mat <- gex.mat[, which(ed.res$FDR <= 0.001)]
-hto.mat <- hto.mat[, match(colnames(gex.mat), colnames(hto.mat))]
+bc.common <- intersect(colnames(gex.mat), colnames(hto.mat))
+gex.mat <- gex.mat[, bc.common]
+hto.mat <- hto.mat[, bc.common]
 ```
 
 ```{r cell-calling-classification}
