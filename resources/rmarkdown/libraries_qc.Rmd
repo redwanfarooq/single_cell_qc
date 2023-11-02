@@ -127,7 +127,7 @@ if (params$adt_matrix == params$gex_matrix) {
   adt.mat <- get.10x.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), type = "Antibody Capture")
   adt.mat <- adt.mat[grep(pattern = "^ADT_", rownames(adt.mat)), ]
 } else {
-  adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), features.pattern = "^ADT_", add.suffix = TRUE)
+  adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), features.pattern = "^ADT_")
 }
 ```
 
