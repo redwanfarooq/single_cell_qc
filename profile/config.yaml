@@ -68,11 +68,11 @@ set-threads:
 # and years, respectively); converted to minutes
 set-resources:
   droplet_qc:
-    mem: 10GiB
-    runtime: 15m
+    mem: 32GiB
+    runtime: 1h
   libraries_qc:
-    mem: 10GiB
-    runtime: 15m
+    mem: 32GiB
+    runtime: 1h
   batch_correction:
-    mem: 50GiB
-    runtime: 30m
+    mem: 64GiB
+    runtime: 1h

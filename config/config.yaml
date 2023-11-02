@@ -30,10 +30,10 @@ output_dir:
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/cellranger_arc/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
-hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
-atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/cellranger_arc/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
-adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
+gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
+# atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/cellranger_arc/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
+adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -84,7 +84,7 @@ atac_filters:
 adt_filters:
   isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
 # batch_correction.Rmd
-control: null #default: null; control sample (i.e. cross-batch technical replicate)
+control: Control #default: null; control sample (i.e. cross-batch technical replicate)
 correction_method: # default: all; options: none, rescale, fastmnn (case-sensitive)
   - none
   - rescale
