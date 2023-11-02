@@ -48,6 +48,7 @@ library(scuttle)
 library(scater)
 library(scran)
 library(batchelor)
+library(Seurat)
 
 # Initialise plotly dependencies
 ggplotly(ggplot())
@@ -94,7 +95,7 @@ if (any(is.missing)) {
 
 # Set parallel processing limits
 plan(multicore, workers = params$threads)
-options(future.globals.maxSize = 1000 * 1024^2) # set default global variable size limit to 1GB
+options(future.globals.maxSize = 10000 * 1024^2) # set default global variable size limit to 10GB
 
 # Parse correction method
 batchelor.param <- lapply(
@@ -205,6 +206,16 @@ gex.mat <- future_Map(
   params$sample_id,
   cells
 ) %>%
+  setNames(params$sample_id) %>%
+  downsampleBatches()
+
+feature.metadata <- future_Map(
+  function(file) {
+    df <- get.10x.features(file.path(dirname(file), "features.tsv.gz"), type = "Gene Expression")
+    return(df)
+  },
+  params$gex_matrix
+) %>%
   setNames(params$sample_id)
 ```
 
@@ -224,8 +235,7 @@ adt.mat <- future_Map(
       mat <- get.barcounter.matrix(
         adt_file,
         cells = cells,
-        features.pattern = "^ADT_",
-        add.suffix = TRUE
+        features.pattern = "^ADT_"
       )
     }
     colnames(mat) <- paste(batch, colnames(mat), sep = "_")
@@ -239,7 +249,8 @@ adt.mat <- future_Map(
   params$sample_id,
   cells
 ) %>%
-  setNames(params$sample_id)
+  setNames(params$sample_id) %>%
+  downsampleBatches()
 ```
 
 # Data processing
@@ -247,18 +258,20 @@ adt.mat <- future_Map(
 ```{r gex-batch-correction, eval=!is.null(params$gex_matrix)}
 cat("## GEX batch correction {.tabset}", "\n\n")
 sce$gex <- future_Map(
-  function(matrix, metadata) {
+  function(matrix, cell.metadata, feature.metadata) {
     SingleCellExperiment(
       assays = list(counts = matrix)
     ) %>%
-      add.cell.metadata(metadata) %>%
-      computePooledFactors(clusters = quickCluster(.))
+      add.cell.metadata(cell.metadata) %>%
+      add.feature.metadata(feature.metadata) %>%
+      computePooledFactors(clusters = quickCluster(.)) %>%
+      logNormCounts()
   },
   gex.mat,
   droplet.qc.res,
+  feature.metadata,
   future.seed = 100
-) %>%
-  multiBatchNorm()
+)
 sce$gex <- future_lapply(
   batchelor.param,
   function(correction.method) {
@@ -304,15 +317,17 @@ cat("## ADT batch correction {.tabset}", "\n\n")
 sce$adt <- future_Map(
   function(matrix, metadata) {
     SingleCellExperiment(
-      assays = list(counts = matrix)
+      assays = list(
+        counts = matrix,
+        logcounts = NormalizeData(matrix, normalization.method = "CLR", margin = 2)
+      )
     ) %>%
-      add.cell.metadata(metadata) %>%
-      computeGeometricFactors()
+      add.cell.metadata(metadata)
   },
   adt.mat,
-  droplet.qc.res
-) %>%
-  multiBatchNorm()
+  droplet.qc.res,
+  future.seed = 100
+)
 sce$adt <- future_lapply(
   batchelor.param,
   function(correction.method) {
