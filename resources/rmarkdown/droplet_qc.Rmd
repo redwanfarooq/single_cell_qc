@@ -117,7 +117,7 @@ cat("* **HTO matrix:**", params$hto_matrix, "\n")
 if (params$hto_matrix == params$gex_matrix) {
   hto.mat <- get.10x.matrix(params$hto_matrix, type = "Antibody Capture")
 } else {
-  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_", add.suffix = grepl(pattern = "-1$", colnames(gex.mat)[1]))
+  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_")
 }
 wl <- names(md)
 hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
@@ -213,6 +213,29 @@ ggplotly(
     fill.lab = "Sample"
   ),
   tooltip = c("fill", "x")
+)
+```
+
+```{r hto-demultiplexing-raw-counts, fig.width=7, fig.height=length(wl)}
+cat("### Raw HTO counts", "\n\n")
+logcounts.plot(
+  hto.mat,
+  scale = 0.95,
+  colour = NA,
+  fill = "#595959",
+  title = "Raw HTO counts"
+)
+```
+
+```{r hto-demultiplexing-demux-counts, fig.width=7, fig.height=3*ceiling(length(wl)/2)}
+cat("### Demultiplexed HTO counts", "\n\n")
+logcounts.plot(
+  hto.mat,
+  samples = demux.res$Sample,
+  scale = 0.95,
+  colour = NA,
+  show.legend = FALSE,
+  title = "Demultiplexed HTO counts"
 )
 ```
 

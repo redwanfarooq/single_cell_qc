@@ -49,7 +49,7 @@ update.params <- function(user, default = params) {
 #'  barcodes.
 #' @param type Character vector. If specified, will subset to features with matching
 #'  values in column 3 of 10x features TSV file.
-#' @param remove.suffix Logical scalar (default `FALSE`). Remove '-1' suffix automatically
+#' @param remove.suffix Logical scalar (default `TRUE`). Remove '-1' suffix automatically
 #'  appended to cell barcodes by Cell Ranger.
 #'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
@@ -59,7 +59,7 @@ update.params <- function(user, default = params) {
 get.10x.matrix <- function(file,
                            cells = NULL,
                            type = NULL,
-                           remove.suffix = FALSE) {
+                           remove.suffix = TRUE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
   matrix <- Matrix::readMM(file) %>% as("CsparseMatrix")
@@ -506,7 +506,7 @@ pvalue.plot <- function(ed.res, ...) {
 #'  features for plotting.
 #' @param pseudocount Numeric scalar (default 1). Added to counts before log
 #'  transformation (to avoid infinite values).
-#' @param x.lower Numeric scalar (default 1). Lower limit of x-axis scale
+#' @param x.lower Numeric scalar (default 0.3). Lower limit of x-axis scale
 #'  (choose a value greater than 0 to avoid loss of resolution due to inflated
 #'  counts close to zero; set to `NA` to use ggplot2 default).
 #' @param x.upper Numeric scalar (default maximum log-count in `matrix`).
@@ -522,7 +522,7 @@ logcounts.plot <- function(matrix,
                            ...,
                            features.pattern = "^[a-zA-Z]+_",
                            pseudocount = 1,
-                           x.lower = 1,
+                           x.lower = 0.3,
                            x.upper = max(log10(matrix + pseudocount)),
                            samples = NULL,
                            title = NULL) {
@@ -626,7 +626,7 @@ multiplet.plot <- function(x,
 #' @param assay.type Character or integer scalar specifying which assay in `x`
 #'  contains log-normalised expression values; only used if existing dimensionality
 #'  reduction results not present in `reducedDims(x)`.
-#' @param n.cells Integer scalar (default 5000). Specifies number of cells to
+#' @param n.cells Integer scalar (default 10000). Specifies number of cells to
 #'  plot; if `x` contains more cells, will randomly downsample to `n.cells`.
 #'  Useful for reducing overplotting and reducing size of interactive plots. Set
 #'  to `Inf` to force plotting all cells in `x`.
@@ -641,7 +641,7 @@ batch.plot <- function(x,
                        assay.type = c("merged", "corrected"),
                        projection = c("TSNE", "UMAP"),
                        use.dimred = c("PCA", "corrected"),
-                       n.cells = 5000,
+                       n.cells = 10000,
                        random.seed = NULL,
                        title = NULL) {
   if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
