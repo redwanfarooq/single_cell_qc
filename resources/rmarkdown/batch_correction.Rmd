@@ -373,7 +373,7 @@ for (x in names(sce$adt)) {
 if (!dir.exists(params$output_dir)) dir.create(params$output_dir, recursive = TRUE)
 cat("```", "\n")
 for (x in names(sce)) {
-  for (y in names(sce[[x]]) %>% setdiff("none")) {
+  for (y in names(sce[[x]])) {
     if (!is.null(params$control)) {
       control <- sce[[x]][[y]]$Sample == params$control
       sce[[x]][[y]] <- sce[[x]][[y]][, !control]
