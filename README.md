@@ -13,8 +13,8 @@ git submodule update --remote
 # Required software
 1. Global environment
     - [Snakemake >=v7.31](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)
-    - [docopt >v=0.6](https://github.com/docopt/docopt)
-    - [pandas >v=2.0](https://pandas.pydata.org/docs/getting_started/install.html)
+    - [docopt >=v0.6](https://github.com/docopt/docopt)
+    - [pandas >=v2.0](https://pandas.pydata.org/docs/getting_started/install.html)
 2. Specific modules
     - [R >=v4.3](https://cran.r-project.org)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)
