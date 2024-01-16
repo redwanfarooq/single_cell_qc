@@ -65,7 +65,6 @@ samples: samples.csv
 # --------------------------------------------------
 # OPTIONAL
 # droplet_qc.Rmd
-emptydrops_lower: 100 # default: 100
 emptydrops_niters: 10000 # default: 10000
 demuxmix_model: auto # default: auto; options: auto, naive (case-sensitive)
 demuxmix_pAcpt: 0.9 # default: 0.9
@@ -83,10 +82,17 @@ atac_filters:
   tss_enrichment: true # default: true
 adt_filters:
   isotype_control: null # default: null; regex pattern for isotype control antibody IDs
-# batch_correction.Rmd
+# ambient_removal.Rmd
 control: null #default: null; control sample (i.e. cross-batch technical replicate)
-correction_method: # default: all; options: none, rescale, fastmnn (case-sensitive)
-  - none
-  - rescale
-  - fastmnn
-correction_projection: TSNE # default: TSNE; options: TSNE, UMAP (case-sensitive)
+gex_ambient_removal:
+  integrate_samples: false # default: false
+  cluster_ndims: 10 # default: 10
+  cluster_k: 20 # default: 20
+  cluster_res: 0.05 # default: 0.05
+  cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
+adt_ambient_removal:
+  integrate_samples: false # default: false
+  cluster_ndims: 10 # default: 10
+  cluster_k: 20 # default: 20
+  cluster_res: 0.2 # default: 0.2
+  cluster_markers: null # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots

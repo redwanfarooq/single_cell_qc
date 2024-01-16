@@ -21,10 +21,10 @@ for key, value in parse_info(info).items():
 # Import rules
 include: 'rules/droplet_qc.smk'
 include: 'rules/libraries_qc.smk'
-include: 'rules/batch_correction.smk'
+include: 'rules/ambient_removal.smk'
 
 # Set targets
-targets = [x for rule in [droplet_qc, libraries_qc, batch_correction] for x in rule]
+targets = [x for rule in [droplet_qc, libraries_qc, ambient_removal] for x in rule]
 # --------------------------------------------------
 
 

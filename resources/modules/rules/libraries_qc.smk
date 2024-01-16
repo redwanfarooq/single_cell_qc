@@ -15,15 +15,15 @@ rule libraries_qc:
     threads: 1
     params:
         path = rmd_dir if os.path.isabs(rmd_dir) else os.path.join(workflow.basedir, rmd_dir),
-        droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}.csv"),
-        output = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}.csv"),
+        droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"),
+        outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}"),
         gex_matrix = lambda wildcards: config.get("gex_matrix", None),
         gex_filters = config.get("gex_filters", None),
         atac_matrix = lambda wildcards: config.get("atac_matrix", None),
         atac_filters = config.get("atac_filters", None),
         adt_matrix = lambda wildcards: config.get("adt_matrix", None),
         adt_filters = config.get("adt_filters", None)
-    conda: "singlecell-r"
+    conda: "single_cell_qc"
     envmodules: "R-cbrg"
     message: "Running libraries QC for {wildcards.sample}"
     script: "{params.path}/libraries_qc.Rmd"

@@ -1,0 +1,428 @@
+---
+title: "Ambient removal report"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    theme: "flatly"
+    highlight: "haddock"
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    df_print: "paged"
+    self_contained: true
+params:
+  rmd: "ambient_removal.Rmd"
+  sample_id: null
+  droplet_qc: null
+  libraries_qc: null
+  outdir: null
+  gex_matrix: null
+  atac_matrix: null
+  adt_matrix: null
+  adt_filters: !r list("isotype_control" = NULL)
+  control: null
+  gex_ambient_removal: !r list("integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
+  adt_ambient_removal: !r list("integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
+---
+
+```{r setup, include=FALSE}
+# Set chunk options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  error = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  comment = "",
+  results = "asis"
+)
+
+# Load packages
+library(dplyr)
+library(ggplot2)
+library(Seurat)
+library(decontX)
+
+# Check if running within Snakemake pipeline
+if (exists("snakemake")) {
+  # if running within Snakemake pipeline
+  log <- file(snakemake@log[[1]], open = "w")
+  sink(log, type = "message") # write stderr to Snakemake log file
+
+  snakemake@source("functions.R")
+
+  unlockBinding("params", .GlobalEnv)
+  params$sample_id <- snakemake@wildcards$sample
+  params <- update.params(snakemake@params)
+  lockBinding("params", .GlobalEnv)
+
+  if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
+} else {
+  # if running in isolation
+  source("functions.R")
+}
+
+# Replace path placeholders
+unlockBinding("params", .GlobalEnv)
+for (x in c("droplet_qc", "libraries_qc", "outdir", "gex_matrix", "atac_matrix", "adt_matrix")) {
+  params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
+  if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
+}
+lockBinding("params", .GlobalEnv)
+
+# Check for missing required params
+required <- c(
+  "sample_id",
+  "droplet_qc",
+  "libraries_qc",
+  "outdir"
+)
+is.missing <- sapply(params[required], is.null)
+if (any(is.missing)) {
+  names <- paste(names(params[required])[is.missing], collapse = ", ")
+  stop(sprintf("The following required parameters are missing: %s", names))
+}
+
+# Initialise results list
+counts <- list("filtered" = list(), "decontaminated" = list())
+```
+
+### Sample: `r params$sample_id`
+
+# Overview
+
+1. Load count matrices and subset to barcodes that passed libraries processing QC
+2. Perform coarse clustering and run decontamination algorithm to remove ambient counts (GEX and ADT libraries only)
+3. Output filtered and decontaminated count matrices in 10x HDF5 format
+
+# Data loading
+
+```{r load-libraries-qc-results}
+cat("* **Libraries QC results:**", params$libraries_qc, "\n")
+cells <- vroom::vroom(
+  file.path(params$libraries_qc, "cell_barcodes.txt"),
+  delim = "\t",
+  col_names = FALSE,
+  show_col_types = FALSE
+) %>%
+  pull(1)
+```
+
+```{r load-droplet-qc-results}
+cat("* **Droplet processing QC results:**", params$droplet_qc, "\n")
+droplet.qc.res <- vroom::vroom(
+  file.path(params$droplet_qc, "metadata.tsv"),
+  delim = "\t",
+  col_names = TRUE,
+  show_col_types = FALSE
+) %>%
+  mutate(Sample = factor(Sample, levels = sort(unique(Sample)), ordered = TRUE)) %>%
+  as.data.frame()
+rownames(droplet.qc.res) <- droplet.qc.res$Barcode
+droplet.qc.res <- droplet.qc.res[cells, ]
+
+empty <- vroom::vroom(
+  file.path(params$droplet_qc, "empty_droplet_barcodes.txt"),
+  delim = "\t",
+  col_names = FALSE,
+  show_col_types = FALSE
+) %>%
+  pull(1)
+```
+
+```{r load-gex-matrix, eval=!is.null(params$gex_matrix)}
+cat("* **GEX matrix:**", params$gex_matrix, "\n")
+gex.mat <- lapply(
+  list("cells" = cells, "background" = empty),
+  get.10x.matrix,
+  file = params$gex_matrix,
+  type = "Gene Expression"
+)
+```
+
+```{r load-atac-matrix, eval=!is.null(params$atac_matrix)}
+cat("* **ATAC matrix:**", params$atac_matrix, "\n")
+atac.mat <- get.10x.matrix(params$atac_matrix, cells = cells, type = "Peaks")
+counts <- lapply(
+  counts,
+  function(list, mat) {
+    list[["Peaks"]] <- mat
+    return(list)
+  },
+  mat = atac.mat
+)
+```
+
+```{r load-adt-matrix, eval=!is.null(params$adt_matrix)}
+cat("* **ADT matrix:**", params$adt_matrix, "\n")
+if (params$adt_matrix == params$gex_matrix) {
+  adt.mat <- lapply(
+    list("cells" = cells, "background" = empty),
+    get.10x.matrix,
+    file = params$adt_matrix,
+    type = "Antibody Capture"
+  ) %>%
+    lapply(function(mat) mat[grep(pattern = "^ADT_", rownames(mat)), ])
+} else {
+  adt.mat <- lapply(
+    list("cells" = cells, "background" = empty),
+    get.barcounter.matrix,
+    file = params$adt_matrix,
+    features.pattern = "^ADT_"
+  )
+}
+
+# Remove isotype control antibodies
+if (!is.null(params$adt_filters$isotype_control)) {
+  adt.mat <- lapply(
+    adt.mat,
+    function(mat, isotype.control) mat[grep(pattern = isotype.control, rownames(mat), invert = TRUE), ],
+    isotype.control = params$adt_filters$isotype_control
+  )
+}
+```
+
+# Data processing
+
+`r if(!is.null(params$gex_matrix)) "## GEX ambient removal {.tabset}"`
+
+```{r gex-ambient-removal, eval=!is.null(params$gex_matrix), include=FALSE}
+seu <- CreateSeuratObject(
+  counts = gex.mat$cells,
+  assay = "RNA",
+  meta.data = droplet.qc.res
+)
+
+if (params$gex_ambient_removal$integrate_samples) {
+  if (!is.null(params$control)) seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "MS")
+  seu.list <- SplitObject(seu, split.by = ifelse(is.null(params$control), "Sample", "donor_type"))
+  seu.list <- lapply(
+    seu.list,
+    function(obj) {
+      obj <- obj %>%
+        NormalizeData() %>%
+        FindVariableFeatures()
+      return(obj)
+    }
+  )
+  features <- SelectIntegrationFeatures(seu.list)
+  seu.list <- lapply(
+    seu.list,
+    function(obj) {
+      obj <- obj %>%
+        ScaleData(features = features) %>%
+        RunPCA(features = features)
+    }
+  )
+  anchors <- FindIntegrationAnchors(
+    seu.list,
+    anchor.features = features,
+    reduction = "rpca"
+  )
+  seu <- IntegrateData(anchors)
+  seu[["RNA"]] <- JoinLayers(seu[["RNA"]])
+  DefaultAssay(seu) <- "integrated"
+} else {
+  seu <- seu %>%
+    NormalizeData() %>%
+    FindVariableFeatures()
+}
+
+seu <- seu %>%
+  ScaleData() %>%
+  RunPCA() %>%
+  RunUMAP(dims = seq.int(1, params$gex_ambient_removal$cluster_ndims)) %>%
+  FindNeighbors(
+    dims = seq.int(1, params$gex_ambient_removal$cluster_ndims),
+    k.param = params$gex_ambient_removal$cluster_k
+  ) %>%
+  FindClusters(resolution = params$gex_ambient_removal$cluster_res)
+
+decont.gex <- decontX(gex.mat$cells, background = gex.mat$background, z = Idents(seu))
+seu[["decontRNA"]] <- CreateAssayObject(counts = round(decont.gex$decontXcounts))
+
+counts <- Map(
+  function(list, assay, obj = seu) {
+    list[["Gene Expression"]] <- GetAssayData(obj, assay = assay, layer = "counts")
+    return(list)
+  },
+  list = counts,
+  assay = c("RNA", "decontRNA")
+)
+```
+
+```{r gex-ambient-removal-samples, eval=!is.null(params$gex_matrix)}
+cat("### Samples", "\n\n")
+UMAPPlot(seu, group.by = "Sample") +
+  labs(title = "Samples") +
+  theme_minimal()
+```
+
+```{r gex-ambient-removal-clusters, eval=!is.null(params$gex_matrix)}
+cat("### Clusters", "\n\n")
+UMAPPlot(seu, group.by = "ident") +
+  labs(title = "Clusters") +
+  theme_minimal()
+```
+
+```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$gex_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$gex_matrix), !is.null(params$gex_ambient_removal$cluster_markers))}
+cat("### Cluster markers", "\n\n")
+plots <- FeaturePlot(
+  seu,
+  features = ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, keys = params$gex_ambient_removal$cluster_markers, keytype = "SYMBOL", columns = c("SYMBOL", "GENEID")),
+  combine = FALSE
+) %>%
+  Map(
+    function(x, title) {
+      x +
+        labs(title = title) +
+        theme_minimal() +
+        theme(legend.position = "none")
+    },
+    .,
+    params$gex_ambient_removal$cluster_markers
+  )
+cowplot::plot_grid(plotlist = plots, ncol = 2)
+```
+
+```{r gex-ambient-removal-diagnostics, eval=!is.null(params$gex_matrix)}
+cat("### Diagnostics", "\n\n")
+cat("* **Pre-clustering sample integration:**", ifelse(params$gex_ambient_removal$integrate_samples, "Yes", "No"), "\n")
+cat("* **Graph principal components:**", params$gex_ambient_removal$cluster_ndims, "\n")
+cat("* **Graph nearest neighbours (k):**", params$gex_ambient_removal$cluster_k, "\n")
+cat("* **Cluster resolution:**", params$gex_ambient_removal$cluster_res, "\n")
+```
+
+`r if(!is.null(params$adt_matrix)) "## ADT ambient removal {.tabset}"`
+
+```{r adt-ambient-removal, eval=!is.null(params$adt_matrix), include=FALSE}
+seu <- CreateSeuratObject(
+  counts = adt.mat$cells,
+  assay = "ADT",
+  meta.data = droplet.qc.res
+)
+VariableFeatures(seu) <- rownames(seu)
+
+if (params$adt_ambient_removal$integrate_samples) {
+  if (!is.null(params$control)) seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "MS")
+  seu.list <- SplitObject(seu, split.by = ifelse(is.null(params$control), "Sample", "donor_type"))
+  seu.list <- lapply(
+    seu.list,
+    function(obj) {
+      obj <- obj %>%
+        NormalizeData(normalization.method = "CLR", margin = 2) %>%
+        ScaleData() %>%
+        RunPCA()
+      return(obj)
+    }
+  )
+  anchors <- FindIntegrationAnchors(
+    seu.list,
+    anchor.features = features,
+    reduction = "rpca"
+  )
+  seu <- IntegrateData(anchors)
+  seu[["ADT"]] <- JoinLayers(seu[["ADT"]])
+  DefaultAssay(seu) <- "integrated"
+} else {
+  seu <- seu %>%
+    NormalizeData(normalization.method = "CLR", margin = 2)
+}
+
+seu <- seu %>%
+  ScaleData() %>%
+  RunPCA() %>%
+  RunUMAP(dims = seq.int(1, params$adt_ambient_removal$cluster_ndims)) %>%
+  FindNeighbors(
+    dims = seq.int(1, params$adt_ambient_removal$cluster_ndims),
+    k.param = params$adt_ambient_removal$cluster_k
+  ) %>%
+  FindClusters(resolution = params$adt_ambient_removal$cluster_res)
+
+decont.adt <- decontPro(adt.mat$cells, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
+seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
+
+counts <- Map(
+  function(list, assay, obj = seu) {
+    list[["Antibody Capture"]] <- GetAssayData(obj, assay = assay, layer = "counts")
+    return(list)
+  },
+  list = counts,
+  assay = c("ADT", "decontADT")
+)
+```
+
+```{r adt-ambient-removal-samples, eval=!is.null(params$adt_matrix)}
+cat("### Samples", "\n\n")
+UMAPPlot(seu, group.by = "Sample") +
+  labs(title = "Samples") +
+  theme_minimal()
+```
+
+```{r adt-ambient-removal-clusters, eval=!is.null(params$adt_matrix)}
+cat("### Clusters", "\n\n")
+UMAPPlot(seu, group.by = "ident") +
+  labs(title = "Clusters") +
+  theme_minimal()
+```
+
+```{r adt-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$adt_matrix), !is.null(params$adt_ambient_removal$cluster_markers))}
+cat("### Cluster markers", "\n\n")
+plots <- FeaturePlot(
+  seu,
+  features = paste("ADT", params$adt_ambient_removal$cluster_markers, sep = "-"),
+  combine = FALSE
+) %>%
+  lapply(
+    function(x) {
+      x +
+        theme_minimal() +
+        theme(legend.position = "none")
+    }
+  )
+cowplot::plot_grid(plotlist = plots, ncol = 2)
+```
+
+```{r adt-ambient-removal-decontaminated-counts, fig.width=3.5*round(sqrt(length(params$adt_ambient_removal$cluster_markers))), fig.height=1.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/round(sqrt(length(params$adt_ambient_removal$cluster_markers)))), eval=all(!is.null(params$adt_matrix), !is.null(params$adt_ambient_removal$cluster_markers))}
+cat("### Decontaminated counts", "\n\n")
+plotDensity(
+  GetAssayData(seu, assay = "ADT", layer = "counts"),
+  GetAssayData(seu, assay = "decontADT", layer = "counts"),
+  paste("ADT", params$adt_ambient_removal$cluster_markers, sep = "-")
+)
+```
+
+```{r adt-ambient-removal-diagnostics, eval=!is.null(params$adt_matrix)}
+cat("### Diagnostics", "\n\n")
+cat("* **Pre-clustering sample integration:**", ifelse(params$adt_ambient_removal$integrate_samples, "Yes", "No"), "\n")
+cat("* **Graph principal components:**", params$adt_ambient_removal$cluster_ndims, "\n")
+cat("* **Graph nearest neighbours (k):**", params$adt_ambient_removal$cluster_k, "\n")
+cat("* **Cluster resolution:**", params$adt_ambient_removal$cluster_res, "\n")
+```
+
+# Output
+
+```{r output}
+if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
+for (type in names(counts)) {
+  feature.counts <- sapply(counts[[type]], nrow)
+  DropletUtils::write10xCounts(
+    path = file.path(params$outdir, sprintf("%s_matrix.h5", type)),
+    x = Reduce(rbind, counts[[type]]),
+    gene.type = rep(names(feature.counts), times = feature.counts),
+    genome = "GRCh38",
+    version = "3",
+    overwrite = TRUE
+  )
+}
+
+cat("* **Output path:**", params$outdir, "\n")
+```
+
+# Session Info
+
+```{r session-info, results="markup"}
+sessionInfo()
+```
+
+# Source
+This report was automatically generated from an R Markdown script (<a download="ambient_removal.Rmd" href="`r base64enc::dataURI(file = params$rmd, mime = 'text/rmd', encoding = 'base64')`">download source</a>).
