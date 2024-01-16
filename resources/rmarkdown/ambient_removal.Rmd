@@ -193,45 +193,32 @@ seu <- CreateSeuratObject(
 )
 
 if (params$gex_ambient_removal$integrate_samples) {
-  if (!is.null(params$control)) seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "MS")
-  seu.list <- SplitObject(seu, split.by = ifelse(is.null(params$control), "Sample", "donor_type"))
-  seu.list <- lapply(
-    seu.list,
-    function(obj) {
-      obj <- obj %>%
-        NormalizeData() %>%
-        FindVariableFeatures()
-      return(obj)
-    }
-  )
-  features <- SelectIntegrationFeatures(seu.list)
-  seu.list <- lapply(
-    seu.list,
-    function(obj) {
-      obj <- obj %>%
-        ScaleData(features = features) %>%
-        RunPCA(features = features)
-    }
-  )
-  anchors <- FindIntegrationAnchors(
-    seu.list,
-    anchor.features = features,
-    reduction = "rpca"
-  )
-  seu <- IntegrateData(anchors)
-  seu[["RNA"]] <- JoinLayers(seu[["RNA"]])
-  DefaultAssay(seu) <- "integrated"
+  if (!is.null(params$control)) {
+    seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
+    split.var <- seu$donor_type
+  } else {
+    split.var <- seu$Sample
+  }
+  seu <- split(seu, split.var) %>%
+    NormalizeData() %>%
+    FindVariableFeatures() %>%
+    ScaleData() %>%
+    RunPCA() %>%
+    IntegrateLayers(method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+  reduction <- "integrated"
 } else {
   seu <- seu %>%
     NormalizeData() %>%
-    FindVariableFeatures()
+    FindVariableFeatures() %>%
+    ScaleData() %>%
+    RunPCA()
+  reduction <- "pca"
 }
 
 seu <- seu %>%
-  ScaleData() %>%
-  RunPCA() %>%
-  RunUMAP(dims = seq.int(1, params$gex_ambient_removal$cluster_ndims)) %>%
+  RunUMAP(reduction = reduction, dims = seq.int(1, params$gex_ambient_removal$cluster_ndims)) %>%
   FindNeighbors(
+    reduction = reduction,
     dims = seq.int(1, params$gex_ambient_removal$cluster_ndims),
     k.param = params$gex_ambient_removal$cluster_k
   ) %>%
@@ -300,39 +287,32 @@ seu <- CreateSeuratObject(
   assay = "ADT",
   meta.data = droplet.qc.res
 )
-VariableFeatures(seu) <- rownames(seu)
 
 if (params$adt_ambient_removal$integrate_samples) {
-  if (!is.null(params$control)) seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "MS")
-  seu.list <- SplitObject(seu, split.by = ifelse(is.null(params$control), "Sample", "donor_type"))
-  seu.list <- lapply(
-    seu.list,
-    function(obj) {
-      obj <- obj %>%
-        NormalizeData(normalization.method = "CLR", margin = 2) %>%
-        ScaleData() %>%
-        RunPCA()
-      return(obj)
-    }
-  )
-  anchors <- FindIntegrationAnchors(
-    seu.list,
-    anchor.features = features,
-    reduction = "rpca"
-  )
-  seu <- IntegrateData(anchors)
-  seu[["ADT"]] <- JoinLayers(seu[["ADT"]])
-  DefaultAssay(seu) <- "integrated"
+  if (!is.null(params$control)) {
+    seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
+    split.var <- seu$donor_type
+  } else {
+    split.var <- seu$Sample
+  }
+  seu <- split(seu, split.var) %>%
+    NormalizeData(normalization.method = "CLR", margin = 2) %>%
+    ScaleData(features = rownames(seu)) %>%
+    RunPCA(features = rownames(seu)) %>%
+    IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+  reduction <- "integrated"
 } else {
   seu <- seu %>%
-    NormalizeData(normalization.method = "CLR", margin = 2)
+    NormalizeData(normalization.method = "CLR", margin = 2) %>%
+    ScaleData(features = rownames(seu)) %>%
+    RunPCA(features = rownames(seu))
+  reduction <- "pca"
 }
 
 seu <- seu %>%
-  ScaleData() %>%
-  RunPCA() %>%
-  RunUMAP(dims = seq.int(1, params$adt_ambient_removal$cluster_ndims)) %>%
+  RunUMAP(reduction = reduction, dims = seq.int(1, params$adt_ambient_removal$cluster_ndims)) %>%
   FindNeighbors(
+    reduction = reduction,
     dims = seq.int(1, params$adt_ambient_removal$cluster_ndims),
     k.param = params$adt_ambient_removal$cluster_k
   ) %>%
