@@ -74,12 +74,12 @@ gex_filters:
   library_size: false # default: true
   library_complexity: false # default: true
   mitochondrial_fraction: true # default: true
-# atac_filters:
-#   peak_count: true # default: true
-#   peak_fraction: true # default: true
-#   blacklist_fraction: true # default: true
-#   nucleosome_signal: true # default: true
-#   tss_enrichment: true # default: true
+atac_filters:
+  peak_count: true # default: true
+  peak_fraction: true # default: true
+  blacklist_fraction: true # default: true
+  nucleosome_signal: true # default: true
+  tss_enrichment: true # default: true
 adt_filters:
   isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
