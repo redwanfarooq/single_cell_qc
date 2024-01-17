@@ -30,10 +30,10 @@ output_dir:
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
-hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
-# atac_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/tea_seq/test/cellranger_arc/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
-adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
+gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
+# atac_matrix: /path/to/atac_dir/{sample}/file.ext
+adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -68,31 +68,41 @@ samples: samples.csv
 emptydrops_niters: 10000 # default: 10000
 demuxmix_model: naive # default: auto; options: auto, naive (case-sensitive)
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP (case-sensitive)
+multiplet_projection: UMAP # default: TSNE; options: TSNE, UMAP (case-sensitive)
 # libraries_qc.Rmd
 gex_filters:
   library_size: false # default: true
   library_complexity: false # default: true
   mitochondrial_fraction: true # default: true
-atac_filters:
-  peak_count: false # default: true
-  peak_fraction: true # default: true
-  blacklist_fraction: true # default: true
-  nucleosome_signal: true # default: true
-  tss_enrichment: true # default: true
+# atac_filters:
+#   peak_count: true # default: true
+#   peak_fraction: true # default: true
+#   blacklist_fraction: true # default: true
+#   nucleosome_signal: true # default: true
+#   tss_enrichment: true # default: true
 adt_filters:
-  isotype_control: null # default: null; regex pattern for isotype control antibody IDs
+  isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
-control: null #default: null; control sample (i.e. cross-batch technical replicate)
+control: Control #default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
-  cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
+  cluster_markers: # default: null; list of cluster marker gene symbols for diagnostic plots
+    - CD3E
+    - MS4A1
+    - LYZ
+    - GNLY
 adt_ambient_removal:
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
-  cluster_markers: null # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+  cluster_markers: # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+    - CD3
+    - CD4
+    - CD8
+    - CD19
+    - CD14
+    - CD16
