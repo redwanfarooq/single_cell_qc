@@ -14,10 +14,9 @@ params:
   rmd: "droplet_qc.Rmd"
   sample_id: NULL
   metadata: NULL
-  output: NULL
+  outdir: NULL
   gex_matrix: NULL
   hto_matrix: NULL
-  emptydrops_lower: 100
   emptydrops_niters: 10000
   demuxmix_model: "auto"
   demuxmix_pAcpt: 0.9
@@ -67,7 +66,7 @@ if (exists("snakemake")) {
 
 # Replace path placeholders
 unlockBinding("params", .GlobalEnv)
-for (x in c("output", "gex_matrix", "hto_matrix")) {
+for (x in c("outdir", "gex_matrix", "hto_matrix")) {
   params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
   if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
 }
@@ -77,7 +76,7 @@ lockBinding("params", .GlobalEnv)
 required <- c(
   "sample_id",
   "metadata",
-  "output",
+  "outdir",
   "gex_matrix",
   "hto_matrix"
 )
@@ -96,7 +95,7 @@ if (any(is.missing)) {
 2. Run cell calling algorithm on GEX count matrix to filter empty droplet barcodes
 3. Run HTO demultiplexing algorithm to classify barcodes as 'singlet' (with assigned HTO), 'multiplet', 'negative' or 'uncertain'
 4. Run multiplet calling algorithm to predict intra-sample multiplets based on known inter-sample multiplets
-5. Output CSV file containing cell metadata for barcodes passing QC filters
+5. Output TSV file containing cell metadata for barcodes passing QC filters and text file containing list of empty droplet barcodes
 
 # Data loading
 
@@ -128,15 +127,16 @@ hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
 ```{r cell-calling}
 cat("## Cell calling {.tabset}", "\n\n")
 set.seed(100)
-ed.res <- emptyDrops(gex.mat, lower = params$emptydrops_lower, niters = params$emptydrops_niters, test.ambient = TRUE)
+ed.res <- emptyDrops(gex.mat, by.rank = sum(sapply(md, function(x) x$cells_loaded)), niters = params$emptydrops_niters, test.ambient = TRUE)
 ed.stats <- list(
-  cells = sum(ed.res$FDR <= 0.001, na.rm = TRUE),
+  cells = sum(ed.res$FDR < 0.001, na.rm = TRUE),
   empty = sum(ed.res$FDR >= 0.001, na.rm = TRUE),
-  background = sum(is.na(ed.res$FDR <= 0.001)),
-  limited = sum(ed.res$Limited[which(ed.res$FDR >= 0.001)]) > 0
+  background = sum(is.na(ed.res$FDR)),
+  limited = any(ed.res$Limited[which(ed.res$FDR >= 0.001)])
 )
 bcrank.res <- barcodeRanks(gex.mat)
-gex.mat <- gex.mat[, which(ed.res$FDR <= 0.001)]
+bc.empty <- gex.mat[, which(ed.res$FDR >= 0.001 | is.na(ed.res$FDR))] %>% colnames()
+gex.mat <- gex.mat[, which(ed.res$FDR < 0.001)]
 bc.common <- intersect(colnames(gex.mat), colnames(hto.mat))
 gex.mat <- gex.mat[, bc.common]
 hto.mat <- hto.mat[, bc.common]
@@ -164,7 +164,6 @@ ggplotly(
 
 ```{r cell-calling-diagnostics}
 cat("### Diagnostics", "\n\n")
-cat("* **Background UMI threshold:**", params$emptydrops_lower %>% format(big.mark = ","), "\n")
 cat("* **Monte Carlo simulation iterations:**", params$emptydrops_niters %>% format(big.mark = ","), "\n")
 cat("* **Limited:**", ifelse(ed.stats$limited, "Yes", "No"), "\n")
 cat("\n\n")
@@ -305,7 +304,7 @@ ggplotly(
 # Output
 
 ```{r output}
-out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
+metadata <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
   as.data.frame() %>%
   tibble::rownames_to_column("Barcode") %>%
   mutate(
@@ -313,11 +312,15 @@ out <- colData(sce)[!sce$known & !sce$predicted, "Sample", drop = FALSE] %>%
     Hash = stringr::str_split_i(params$sample_id, pattern = "-", i = 2),
     Sample = sapply(Sample, function(x) md[[x]]$sample)
   )
-if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)
+if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write(
-  out,
-  file = params$output,
-  delim = ","
+  metadata,
+  file = file.path(params$outdir, "metadata.tsv"),
+  delim = "\t"
+)
+vroom::vroom_write_lines(
+  bc.empty,
+  file = file.path(params$outdir, "empty_droplet_barcodes.txt")
 )
 
 cat("* **Total barcodes passed:**", rd.stats$singlets %>% format(big.mark = ","), "\n")
@@ -326,7 +329,7 @@ cat("  + **Empty droplets:**", sum(ed.stats$empty, ed.stats$background) %>% form
 cat("  + **Negative/uncertain HTO:**", sum(demux.stats$negative, demux.stats$uncertain) %>% format(big.mark = ","), "\n")
 cat("  + **Multiplets:**", sum(rd.stats$known, rd.stats$predicted) %>% format(big.mark = ","), "\n")
 cat("\n\n")
-out
+metadata
 ```
 
 # Session Info

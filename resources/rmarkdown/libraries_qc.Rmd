@@ -14,7 +14,7 @@ params:
   rmd: "libraries_qc.Rmd"
   sample_id: null
   droplet_qc: null
-  output: null
+  outdir: null
   gex_matrix: null
   gex_filters: !r list("library_size" = TRUE, "library_complexity" = TRUE, "mitochondrial_fraction" = TRUE)
   atac_matrix: null
@@ -66,7 +66,7 @@ if (exists("snakemake")) {
 
 # Replace path placeholders
 unlockBinding("params", .GlobalEnv)
-for (x in c("droplet_qc", "output", "gex_matrix", "atac_matrix", "adt_matrix")) {
+for (x in c("droplet_qc", "outdir", "gex_matrix", "atac_matrix", "adt_matrix")) {
   params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
   if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
 }
@@ -76,7 +76,7 @@ lockBinding("params", .GlobalEnv)
 required <- c(
   "sample_id",
   "droplet_qc",
-  "output"
+  "outdir"
 )
 is.missing <- sapply(params[required], is.null)
 if (any(is.missing)) {
@@ -92,43 +92,58 @@ bc <- list()
 
 # Overview
 
-1. Load count matrices and subset to barcodes that passed droplet processing QC
+1. Load count matrices and subset to common barcodes that passed droplet processing QC
 2. Calculate QC metrics and discard outliers on 1 or more metrics
-3. Output CSV file containing list of barcodes passing QC filters
+3. Output text file containing list of barcodes passing QC filters
 
 # Data loading
 
 ```{r load-droplet-qc-results}
-cat("* **Droplet processing QC results:**", params$droplet_qc, "\n")
+cat("* **Droplet processing QC results:**", file.path(params$droplet_qc, "metadata.tsv"), "\n")
 droplet.qc.res <- vroom::vroom(
-  params$droplet_qc,
-  delim = ",",
+  file.path(params$droplet_qc, "metadata.tsv"),
+  delim = "\t",
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  mutate(Sample = factor(Sample)) %>%
+  mutate(Sample = factor(Sample, levels = sort(unique(Sample)), ordered = TRUE)) %>%
   as.data.frame()
 rownames(droplet.qc.res) <- droplet.qc.res$Barcode
+bc$cells <- rownames(droplet.qc.res)
 ```
 
 ```{r load-gex-matrix, eval=!is.null(params$gex_matrix)}
 cat("* **GEX matrix:**", params$gex_matrix, "\n")
-gex.mat <- get.10x.matrix(params$gex_matrix, cells = rownames(droplet.qc.res), type = "Gene Expression")
+gex.mat <- get.10x.matrix(params$gex_matrix, type = "Gene Expression")
+bc$gex <- colnames(gex.mat)
 ```
 
 ```{r load-atac-matrix, eval=!is.null(params$atac_matrix)}
 cat("* **ATAC matrix:**", params$atac_matrix, "\n")
-atac.mat <- get.10x.matrix(params$atac_matrix, cells = rownames(droplet.qc.res), type = "Peaks")
+atac.mat <- get.10x.matrix(params$atac_matrix, type = "Peaks")
+bc$atac <- colnames(atac.mat)
 ```
 
 ```{r load-adt-matrix, eval=!is.null(params$adt_matrix)}
 cat("* **ADT matrix:**", params$adt_matrix, "\n")
 if (params$adt_matrix == params$gex_matrix) {
-  adt.mat <- get.10x.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), type = "Antibody Capture")
+  adt.mat <- get.10x.matrix(params$adt_matrix, type = "Antibody Capture")
   adt.mat <- adt.mat[grep(pattern = "^ADT_", rownames(adt.mat)), ]
 } else {
-  adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = rownames(droplet.qc.res), features.pattern = "^ADT_")
+  adt.mat <- get.barcounter.matrix(params$adt_matrix, features.pattern = "^ADT_")
 }
+bc$adt <- colnames(adt.mat)
+```
+
+```{r subset-barcodes}
+bc.common <- Reduce(intersect, bc)
+droplet.qc.res <- droplet.qc.res[bc.common, ]
+if (exists("gex.mat")) gex.mat <- gex.mat[, bc.common]
+if (exists("atac.mat")) atac.mat <- atac.mat[, bc.common]
+if (exists("adt.mat")) adt.mat <- adt.mat[, bc.common]
+
+# Re-initialise results list
+bc <- list()
 ```
 
 # Data processing
@@ -237,9 +252,9 @@ ggplotly(
 
 ```{r atac-qc-metrics, eval=!is.null(params$atac_matrix)}
 cat("## ATAC QC metrics {.tabset}", "\n\n")
-fragments <- CreateFragmentObject(file.path(dirname(params$atac_matrix), "../atac_fragments.tsv.gz"), cells = rownames(droplet.qc.res))
+fragments <- CreateFragmentObject(file.path(dirname(params$atac_matrix), "../fragments.tsv.gz"), cells = bc.common)
 annotation <- GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86)
-seqlevels(annotation) <- paste0("chr", seqlevels(annotation))
+seqlevelsStyle(annotation) <- "UCSC"
 seu <- CreateSeuratObject(
   counts = CreateChromatinAssay(
     counts = atac.mat,
@@ -260,7 +275,8 @@ if (params$atac_filters$peak_fraction) {
   rownames(fragments.count) <- fragments.count$CB
   seu$fragments <- fragments.count[colnames(seu), "frequency_count"]
   seu <- FRiP(seu, assay = "ATAC", total.fragments = "fragments")
-  qc$low_peak_fraction <- isOutlier(seu$FRiP, type = "lower", log = TRUE)
+  if (any(seu$FRiP > 1)) seu$FRiP <- seu$FRiP / 2 # if any FRiP > 1, assume peak counts represent transposition events rather than fragments and divide by 2 to adjust
+  qc$low_peak_fraction <- seu$FRiP < 0.2 # hard threshold of 0.2 as per ENCODE consortium guidelines
 }
 if (params$atac_filters$blacklist_fraction) {
   seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
@@ -309,8 +325,7 @@ ggplotly(
     size = 0.5,
     title = "Low fraction reads in peaks",
     x.lab = "Sample",
-    y.lab = "Percentage reads in peaks",
-    log = TRUE
+    y.lab = "Percentage reads in peaks"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
@@ -475,12 +490,15 @@ if (is.null(params$adt_filters$isotype_control)) {
 # Output
 
 ```{r output}
-out <- Reduce(intersect, bc, init = rownames(droplet.qc.res))
-if (!dir.exists(dirname(params$output))) dir.create(dirname(params$output), recursive = TRUE)
-cat(out, file = params$output, sep = "\n")
+bc.pass <- Reduce(intersect, bc, init = rownames(droplet.qc.res))
+if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
+vroom::vroom_write_lines(
+  bc.pass,
+  file = file.path(params$outdir, "cell_barcodes.txt")
+)
 
-cat("* **Total cells passed:**", length(out) %>% format(big.mark = ","), "\n")
-cat("* **Total cells excluded:**", (nrow(droplet.qc.res) - length(out)) %>% format(big.mark = ","), "\n")
+cat("* **Total cells passed:**", length(bc.pass) %>% format(big.mark = ","), "\n")
+cat("* **Total cells excluded:**", (nrow(droplet.qc.res) - length(bc.pass)) %>% format(big.mark = ","), "\n")
 if (!is.null(params$gex_matrix)) {
   cat("  + **Failed GEX QC:**", (nrow(droplet.qc.res) - length(bc$gex)) %>% format(big.mark = ","), "\n")
 }

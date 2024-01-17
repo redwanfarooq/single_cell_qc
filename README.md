@@ -13,21 +13,23 @@ git submodule update --remote
 # Required software
 1. Global environment
     - [Snakemake >=v7.31](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)
-    - [docopt >v=0.6](https://github.com/docopt/docopt)
-    - [pandas >v=2.0](https://pandas.pydata.org/docs/getting_started/install.html)
+    - [docopt >=v0.6](https://github.com/docopt/docopt)
+    - [pandas >=v2.0](https://pandas.pydata.org/docs/getting_started/install.html)
 2. Specific modules
     - [R >=v4.3](https://cran.r-project.org)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)
-        * [plotly v4.10.2](https://CRAN.R-project.org/package=plotly)
-        * [Seurat v4.3.0.1](https://CRAN.R-project.org/package=Seurat)
-        * [Signac v1.10.0](https://CRAN.R-project.org/package=Signac)
-        * [Bioconductor v3.17](https://www.bioconductor.org/install/)
+        * [cowplot v1.1.2](https://CRAN.R-project.org/package=cowplot)
+        * [plotly v4.10.4](https://CRAN.R-project.org/package=plotly)
+        * [Seurat v5.0.0](https://CRAN.R-project.org/package=Seurat)
+        * [Signac v1.12.0](https://CRAN.R-project.org/package=Signac)
+        * [Bioconductor v3.18](https://www.bioconductor.org/install/)
             + DropletUtils
             + demuxmix
             + scuttle
             + scater
             + scran
             + scDblFinder
+            + decontX
 
 # Setup
 1. Install software for global environment (requires Anaconda or Miniconda - see [installation instructions](https://conda.io/projects/conda/en/stable/user-guide/install/index.html))

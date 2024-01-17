@@ -67,7 +67,11 @@ get.10x.matrix <- function(file,
   features <- get.10x.features(file.path(dirname(file), "features.tsv.gz"))
   colnames(matrix) <- rownames(barcodes)
   rownames(matrix) <- rownames(features)
-  if (!is.null(cells)) matrix <- matrix[, cells]
+  if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
+  if (any(is.na(colnames(matrix)))) {
+    warning(sum(is.na(colnames(matrix))), " barcode(s) in 'cells' not present in count matrix")
+    matrix <- matrix[, !is.na(colnames(matrix))]
+  }
   if (!is.null(type)) matrix <- matrix[features$Type %in% type, ]
 
   return(matrix)
@@ -138,12 +142,12 @@ get.10x.features <- function(file, type = NULL) {
 #' Loads BarCounter count matrix (in CSV format).
 #'
 #' @param file Path to file.
-#' @param include.total Logical scalar (default `FALSE`). Include column containing
-#'  total UMI count per barcode.
 #' @param cells Character vector. If specified, will subset to matching cell
 #'  barcodes (after adding suffix if `add.suffix = TRUE`).
 #' @param features.pattern Regular expression string. If specified, with subset
 #'  to features with matching names.
+#' @param include.total Logical scalar (default `FALSE`). Include column containing
+#'  total UMI count per barcode.
 #' @param add.suffix Logical scalar (default `FALSE`). Add '-1' suffix to match
 #'  cell barcodes from Cell Ranger.
 #'
@@ -152,9 +156,9 @@ get.10x.features <- function(file, type = NULL) {
 #'
 #' @export
 get.barcounter.matrix <- function(file,
-                                  include.total = FALSE,
                                   cells = NULL,
                                   features.pattern = NULL,
+                                  include.total = FALSE,
                                   add.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
@@ -164,7 +168,11 @@ get.barcounter.matrix <- function(file,
     t()
   if (add.suffix) colnames(matrix) <- paste(colnames(matrix), "1", sep = "-")
   if (!include.total) matrix <- matrix[-1, ]
-  if (!is.null(cells)) matrix <- matrix[, cells]
+  if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
+  if (any(is.na(colnames(matrix)))) {
+    warning(sum(is.na(colnames(matrix))), " barcode(s) in 'cells' not present in count matrix")
+    matrix <- matrix[, !is.na(colnames(matrix))]
+  }
   if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, rownames(matrix)), ]
 
   return(matrix)
