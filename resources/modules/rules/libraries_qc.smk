@@ -18,10 +18,10 @@ rule libraries_qc:
         droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"),
         outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}"),
         gex_matrix = lambda wildcards: config.get("gex_matrix", None),
-        gex_filters = config.get("gex_filters", None),
         atac_matrix = lambda wildcards: config.get("atac_matrix", None),
-        atac_filters = config.get("atac_filters", None),
         adt_matrix = lambda wildcards: config.get("adt_matrix", None),
+        gex_filters = config.get("gex_filters", None),
+        atac_filters = config.get("atac_filters", None),
         adt_filters = config.get("adt_filters", None)
     conda: "single_cell_qc"
     envmodules: "R-cbrg"
