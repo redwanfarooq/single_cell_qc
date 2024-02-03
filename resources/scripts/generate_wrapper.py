@@ -11,8 +11,10 @@ Requires:
 # ==============================
 # MODULES
 # ==============================
+import os
 import string
 import docopt
+from loguru import logger
 
 
 # ==============================
@@ -48,13 +50,17 @@ use rule * from {0} as *"""
 # ==============================
 # FUNCTIONS
 # ==============================
+@logger.catch(reraise=True)
 def _main(opt: dict) -> None:
     # Generate wrapper script
+    logger.info("Generating pipeline wrapper script")
+    logger.info("Template: {}", os.path.abspath(opt["--template"]))
     generate_wrapper(
         module=opt["--module"],
         template=opt["--template"],
         filename=opt["--file"],
     )
+    logger.success("Output file: {}", os.path.abspath(opt["--file"]))
 
 
 def generate_wrapper(module: str, template: str, filename: str | None = None) -> str:

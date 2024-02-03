@@ -17,6 +17,7 @@ import os
 import string
 import yaml
 import docopt
+from loguru import logger
 
 
 # ==============================
@@ -49,18 +50,25 @@ RULES = "{}"
 # ==============================
 # FUNCTIONS
 # ==============================
+@logger.catch(reraise=True)
 def _main(opt: dict) -> None:
     # Read input YAML
     with open(file=opt["--modules"], mode="r", encoding="UTF-8") as file:
         modules = yaml.load(stream=file, Loader=yaml.SafeLoader)
 
     # Generate module scripts
+    logger.info("Updating module scripts")
+    logger.info("Template: {}", os.path.abspath(opt["--template"]))
     for name, rules in modules.items():
         generate_module(
             name=name,
             rules=rules,
             template=opt["--template"],
             filename=os.path.join(opt["--outdir"], f"{name}.smk"),
+        )
+        logger.success(
+            "Output file: {}",
+            os.path.abspath(os.path.join(opt["--outdir"], f"{name}.smk"))
         )
 
 
