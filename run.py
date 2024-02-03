@@ -12,6 +12,7 @@ Runs single cell data QC pipeline.
 import os
 import yaml
 import docopt
+from loguru import logger
 
 
 # ==============================
@@ -31,24 +32,19 @@ Options:
 
 
 # ==============================
-# GLOBAL VARIABLES
-# ==============================
-CONSOLE_LOG = "echo $(date '+[%Y-%m-%d%t%H:%M:%S]') {}"
-
-
-# ==============================
 # FUNCTIONS
 # ==============================
+@logger.catch(reraise=True)
 def _main(opt: dict) -> None:
     # Get and execute shell command
+    if not opt["--update"]:
+        logger.info("Starting pipeline using module {}", MODULE)
     cmd = _get_cmd(update=opt["--update"])
     os.system(" && ".join(cmd))
 
 
-def _cmd(*args, message: str):
+def _cmd(*args):
     cmd = [" ".join(args)]
-    cmd.insert(0, CONSOLE_LOG.format(message))
-    cmd.append(CONSOLE_LOG.format("Done."))
     return cmd
 
 
@@ -59,25 +55,19 @@ def _get_cmd(update: bool = False) -> list[str]:
             "--modules=config/modules.yaml",
             "--template=resources/templates/module.template",
             "--outdir=resources/modules",
-            message="Updating module scripts...",
         )
     else:
         cmd = _cmd(
             f"{SCRIPTS_DIR}/generate_wrapper.py",
             f"--module={MODULE}",
             "--template=resources/templates/wrapper.template",
-            message="Generating wrapper script...",
         )
         cmd += _cmd(
             f"{SCRIPTS_DIR}/generate_info_yaml.py",
             f"--md={SAMPLES_CSV}",
             f"--outdir={METADATA_DIR}",
-            message="Generating info YAML file...",
         )
-        cmd += _cmd(
-            "snakemake --profile=profile",
-            message="Starting single cell data QC pipeline...",
-        )
+        cmd += _cmd("snakemake --profile=profile")
     return cmd
 
 
