@@ -293,7 +293,7 @@ ggplotly(
     sce,
     rd.res,
     size = 0.1,
-    projection = "TSNE",
+    projection = params$multiplet_projection,
     use.dimred = "PCA",
     random.seed = 100
   ),
