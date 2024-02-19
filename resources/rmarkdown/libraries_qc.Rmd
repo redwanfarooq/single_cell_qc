@@ -1,26 +1,35 @@
 ---
-title: "Libraries QC report"
+title: Libraries QC report
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
-    theme: "flatly"
-    highlight: "haddock"
+    theme: flatly
+    highlight: haddock
     toc: true
     toc_depth: 2
     toc_float: true
-    df_print: "paged"
+    df_print: paged
     self_contained: true
 params:
-  rmd: "libraries_qc.Rmd"
+  rmd: libraries_qc.Rmd
   sample_id: null
   droplet_qc: null
   outdir: null
   gex_matrix: null
-  gex_filters: !r list("library_size" = TRUE, "library_complexity" = TRUE, "mitochondrial_fraction" = TRUE)
   atac_matrix: null
-  atac_filters: !r list("peak_count" = TRUE, "peak_fraction" = TRUE, "blacklist_fraction" = TRUE, "nucleosome_signal" = TRUE, "tss_enrichment" = TRUE)
   adt_matrix: null
-  adt_filters: !r list("isotype_control" = NULL)
+  gex_filters:
+    library_size: true
+    library_complexity: true
+    mitochondrial_fraction: true
+  atac_filters:
+    peak_count: true
+    peak_fraction: true
+    blacklist_fraction: true
+    nucleosome_signal: true
+    tss_enrichment: true
+  adt_filters:
+    isotype_control: null
 ---
 
 ```{r setup, include=FALSE}

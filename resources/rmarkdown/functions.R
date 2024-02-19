@@ -280,6 +280,84 @@ add.feature.metadata <- function(x,
 }
 
 
+#' Joint cell calling algorithm
+#'
+#' @description
+#' Modified implementation of CellRanger ARC joint cell calling algorithm.
+#'
+#' Algorithm steps:
+#' 1. Compute log10-transformed total counts for each modality per barcode
+#' 2. Filter to barcodes with count >= 1 for every modality
+#' 3. Deduplicate barcodes with identical counts across all modalities
+#' 4. Determine initial thresholds for cell-containing barcodes using OrdMag algorithm
+#'    for each modality and compute centroids for cell-containing and empty barcodes
+#' 5. Peform k-means clustering (k = 2) initialised using centroids from OrdMag-based
+#'    thresholds and update barcode labels based on cluster assignment
+#' 6. Project barcode labels from deduplicated set to full set
+#'
+#' Key differences from CellRanger ARC implementation are:
+#' * Lack of initial pre-filtering steps
+#' * Generalisation to more than 2 modalities
+#'
+#' @param matrix.list List of raw count matrices.
+#' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for ordmag function.
+#' @param ordmag.ratio Numeric scalar (default 10). Ratio used for ordmag function.
+#'
+#' @returns Character vector of cell-containing barcodes.
+joint.cell.caller <- function(matrix.list,
+                              ordmag.quantile = 0.99,
+                              ordmag.ratio = 10) {
+  if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
+  if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
+
+  # ordmag function (expects input to be log10-transformed counts)
+  ordmag <- function(x) max(quantile(x, probs = ordmag.quantile) - log10(ordmag.ratio), min(x))
+
+  matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
+
+  logcounts <- Map(
+    f = function(x, i) {
+      data.frame(log10(colSums(x))) %>%
+        setNames(paste("logcounts", i, sep = ".")) %>%
+        tibble::rownames_to_column("barcode")
+    },
+    x = matrix.list,
+    i = names(matrix.list)
+  ) %>%
+    Reduce(
+      x = .,
+      f = function(x, y) dplyr::full_join(x, y, by = "barcode")
+    ) %>%
+    dplyr::filter(dplyr::if_all(dplyr::everything(), function(x) !is.na(x)))
+
+  deduplicated <- logcounts %>%
+    dplyr::select(dplyr::starts_with("logcounts")) %>%
+    dplyr::distinct()
+  centers <- deduplicated %>%
+    dplyr::mutate(
+      cell = dplyr::if_else(dplyr::if_all(dplyr::everything(), function(x) x > ordmag(x)), TRUE, FALSE)
+    ) %>%
+    dplyr::group_by(cell) %>%
+    dplyr::summarise(dplyr::across(dplyr::starts_with("logcounts"), mean)) %>%
+    dplyr::arrange(cell) %>%
+    tibble::column_to_rownames("cell") %>%
+    as.matrix()
+  deduplicated <- deduplicated %>%
+    dplyr::mutate(
+      cell = dplyr::case_match(kmeans(x = ., centers = centers)$cluster, 1 ~ FALSE, 2 ~ TRUE)
+    )
+
+  cells <- dplyr::left_join(
+    x = logcounts,
+    y = deduplicated,
+    by = paste("logcounts", names(matrix.list), sep = ".")
+  ) %>%
+    dplyr::filter(cell) %>%
+    dplyr::pull("barcode")
+  return(cells)
+}
+
+
 #' Generate scatter plot
 #'
 #' Makes a scatter plot.
@@ -446,22 +524,21 @@ bar.plot <- function(data,
 #' Generate barcode rank plot
 #'
 #' Makes a barcode rank plot coloured by fraction of barcodes at each rank called
-#' as cells using the output of [DropletUtils::barcodeRanks()] and
-#' [DropletUtils::emptyDrops()].
+#' as cells using the output of [DropletUtils::barcodeRanks()].
 #'
 #' @param bcrank.res DataFrame output of [DropletUtils::barcodeRanks()].
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @param cells Character vector of cell-containing barcodes.
 #' @param ... Arguments to pass to [scatter.plot()]
 #'
 #' @returns Plot object.
 #'
 #' @export
-bcrank.plot <- function(bcrank.res, ed.res, ...) {
+bcrank.plot <- function(bcrank.res, cells, ...) {
   data <- bcrank.res %>%
     as.data.frame() %>%
-    cbind(FDR = ed.res$FDR) %>%
-    dplyr::group_by(rank, total) %>%
-    dplyr::summarise(fraction.cells = sum(FDR <= 0.001, na.rm = TRUE) / dplyr::n())
+    dplyr::mutate(cell = dplyr::if_else(rownames(.) %in% cells, TRUE, FALSE)) %>%
+    dplyr::group_by(rank, total, cell) %>%
+    dplyr::summarise(fraction.cells = sum(cell) / dplyr::n())
 
   plot <- scatter.plot(
     data,

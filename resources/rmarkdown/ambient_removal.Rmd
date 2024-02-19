@@ -1,17 +1,17 @@
 ---
-title: "Ambient removal report"
+title: Ambient removal report
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
-    theme: "flatly"
-    highlight: "haddock"
+    theme: flatly
+    highlight: haddock
     toc: true
     toc_depth: 2
     toc_float: true
-    df_print: "paged"
+    df_print: paged
     self_contained: true
 params:
-  rmd: "ambient_removal.Rmd"
+  rmd: ambient_removal.Rmd
   sample_id: null
   droplet_qc: null
   libraries_qc: null
@@ -19,10 +19,21 @@ params:
   gex_matrix: null
   atac_matrix: null
   adt_matrix: null
-  adt_filters: !r list("isotype_control" = NULL)
+  adt_filters:
+    isotype_control: null
   control: null
-  gex_ambient_removal: !r list("integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
-  adt_ambient_removal: !r list("integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
+  gex_ambient_removal:
+    integrate_samples: false
+    cluster_ndims: 10
+    cluster_k: 20
+    cluster_res: 0.05
+    cluster_markers: null
+  adt_ambient_removal:
+    integrate_samples: false
+    cluster_ndims: 10
+    cluster_k: 20
+    cluster_res: 0.2
+    cluster_markers: null
 ---
 
 ```{r setup, include=FALSE}
@@ -120,23 +131,20 @@ droplet.qc.res <- vroom::vroom(
 rownames(droplet.qc.res) <- droplet.qc.res$Barcode
 droplet.qc.res <- droplet.qc.res[cells, ]
 
-empty <- vroom::vroom(
-  file.path(params$droplet_qc, "empty_droplet_barcodes.txt"),
-  delim = "\t",
-  col_names = FALSE,
-  show_col_types = FALSE
-) %>%
-  pull(1)
+if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt"))) {
+  empty <- vroom::vroom(
+    file.path(params$droplet_qc, "empty_droplet_barcodes.txt"),
+    delim = "\t",
+    col_names = FALSE,
+    show_col_types = FALSE
+  ) %>%
+    pull(1)
+}
 ```
 
 ```{r load-gex-matrix, eval=!is.null(params$gex_matrix)}
 cat("* **GEX matrix:**", params$gex_matrix, "\n")
-gex.mat <- lapply(
-  list("cells" = cells, "background" = empty),
-  get.10x.matrix,
-  file = params$gex_matrix,
-  type = "Gene Expression"
-)
+gex.mat <- get.10x.matrix(params$gex_matrix, cells = cells, type = "Gene Expression")
 ```
 
 ```{r load-atac-matrix, eval=!is.null(params$atac_matrix)}
@@ -155,29 +163,15 @@ counts <- lapply(
 ```{r load-adt-matrix, eval=!is.null(params$adt_matrix)}
 cat("* **ADT matrix:**", params$adt_matrix, "\n")
 if (params$adt_matrix == params$gex_matrix) {
-  adt.mat <- lapply(
-    list("cells" = cells, "background" = empty),
-    get.10x.matrix,
-    file = params$adt_matrix,
-    type = "Antibody Capture"
-  ) %>%
-    lapply(function(mat) mat[grep(pattern = "^ADT_", rownames(mat)), ])
+  adt.mat <- get.10x.matrix(params$adt_matrix, cells = cells, type = "Antibody Capture")
+  adt.mat <- adt.mat[grep(pattern = "^ADT_", rownames(adt.mat)), ]
 } else {
-  adt.mat <- lapply(
-    list("cells" = cells, "background" = empty),
-    get.barcounter.matrix,
-    file = params$adt_matrix,
-    features.pattern = "^ADT_"
-  )
+  adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = cells, features.pattern = "^ADT_")
 }
 
 # Remove isotype control antibodies
 if (!is.null(params$adt_filters$isotype_control)) {
-  adt.mat <- lapply(
-    adt.mat,
-    function(mat, isotype.control) mat[grep(pattern = isotype.control, rownames(mat), invert = TRUE), ],
-    isotype.control = params$adt_filters$isotype_control
-  )
+  adt.mat <- adt.mat[grep(pattern = params$adt_filters$isotype_control, rownames(adt.mat), invert = TRUE), ]
 }
 ```
 
@@ -187,7 +181,7 @@ if (!is.null(params$adt_filters$isotype_control)) {
 
 ```{r gex-ambient-removal, eval=!is.null(params$gex_matrix), include=FALSE}
 seu <- CreateSeuratObject(
-  counts = gex.mat$cells,
+  counts = gex.mat,
   assay = "RNA",
   meta.data = droplet.qc.res
 )
@@ -224,7 +218,11 @@ seu <- seu %>%
   ) %>%
   FindClusters(resolution = params$gex_ambient_removal$cluster_res)
 
-decont.gex <- decontX(gex.mat$cells, background = gex.mat$background, z = Idents(seu))
+decont.gex <- decontX(
+  gex.mat,
+  background = eval(if (exists("empty")) get.10x.matrix(params$gex_matrix, cells = empty, type = "Gene Expression") else NULL),
+  z = Idents(seu)
+)
 seu[["decontRNA"]] <- CreateAssayObject(counts = round(decont.gex$decontXcounts))
 
 counts <- Map(
@@ -283,7 +281,7 @@ cat("* **Cluster resolution:**", params$gex_ambient_removal$cluster_res, "\n")
 
 ```{r adt-ambient-removal, eval=!is.null(params$adt_matrix), include=FALSE}
 seu <- CreateSeuratObject(
-  counts = adt.mat$cells,
+  counts = adt.mat,
   assay = "ADT",
   meta.data = droplet.qc.res
 )
@@ -318,7 +316,7 @@ seu <- seu %>%
   ) %>%
   FindClusters(resolution = params$adt_ambient_removal$cluster_res)
 
-decont.adt <- decontPro(adt.mat$cells, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
+decont.adt <- decontPro(adt.mat, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
 seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 
 counts <- Map(
