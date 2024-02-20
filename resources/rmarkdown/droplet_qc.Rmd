@@ -249,8 +249,8 @@ ggplotly(
 )
 ```
 
-```{r cell-calling-multimodal-plots, eval=all(!params$pre_filtered, length(modalities) > 1)}
-cat("### Multimodal plots", "\n\n")
+```{r cell-calling-cross-sensitivities, eval=all(!params$pre_filtered, length(modalities) > 1)}
+cat("### Cross-sensitivities", "\n\n")
 for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
   plot <- scatter.plot(
     data = total.counts %>%
@@ -263,8 +263,8 @@ for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
     colour = type,
     size = 0.1,
     title = paste(toupper(comb[1]), "vs", toupper(comb[2]), sep = " "),
-    x.lab = paste(toupper(comb[1]), if_else(comb[1] == "atac", "fragment", "UMI"), "count", sep = " "),
-    y.lab = paste(toupper(comb[2]), if_else(comb[2] == "atac", "fragment", "UMI"), "count", sep = " "),
+    x.lab = paste(toupper(comb[1]), if_else(comb[1] == "atac", "peak read", "UMI"), "count", sep = " "),
+    y.lab = paste(toupper(comb[2]), if_else(comb[2] == "atac", "peak read", "UMI"), "count", sep = " "),
     log = TRUE
   ) +
     scale_colour_manual(values = list(Cell = "#69b764", Empty = "lightgrey"))
