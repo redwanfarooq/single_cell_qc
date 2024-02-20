@@ -23,12 +23,14 @@ params:
     isotype_control: null
   control: null
   gex_ambient_removal:
+    skip: false
     integrate_samples: false
     cluster_ndims: 10
     cluster_k: 20
     cluster_res: 0.05
     cluster_markers: null
   adt_ambient_removal:
+    skip: false
     integrate_samples: false
     cluster_ndims: 10
     cluster_k: 20
@@ -177,7 +179,7 @@ if (!is.null(params$adt_filters$isotype_control)) {
 
 # Data processing
 
-`r if(!is.null(params$gex_matrix)) "## GEX ambient removal {.tabset}"`
+`r if(!is.null(params$gex_matrix) && !params$gex_ambient_removal$skip) "## GEX ambient removal {.tabset}"`
 
 ```{r gex-ambient-removal, eval=!is.null(params$gex_matrix), include=FALSE}
 seu <- CreateSeuratObject(
@@ -186,44 +188,48 @@ seu <- CreateSeuratObject(
   meta.data = droplet.qc.res
 )
 
-if (params$gex_ambient_removal$integrate_samples) {
-  if (!is.null(params$control)) {
-    seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
-    split.var <- seu$donor_type
-  } else {
-    split.var <- seu$Sample
-  }
-  seu <- split(seu, split.var) %>%
-    NormalizeData() %>%
-    FindVariableFeatures() %>%
-    ScaleData() %>%
-    RunPCA() %>%
-    IntegrateLayers(method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
-  reduction <- "integrated"
+if (params$gex_ambient_removal$skip) {
+  seu[["decontRNA"]] <- seu[["RNA"]]
 } else {
+  if (params$gex_ambient_removal$integrate_samples) {
+    if (!is.null(params$control)) {
+      seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
+      split.var <- seu$donor_type
+    } else {
+      split.var <- seu$Sample
+    }
+    seu <- split(seu, split.var) %>%
+      NormalizeData() %>%
+      FindVariableFeatures() %>%
+      ScaleData() %>%
+      RunPCA() %>%
+      IntegrateLayers(method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+    reduction <- "integrated"
+  } else {
+    seu <- seu %>%
+      NormalizeData() %>%
+      FindVariableFeatures() %>%
+      ScaleData() %>%
+      RunPCA()
+    reduction <- "pca"
+  }
+
   seu <- seu %>%
-    NormalizeData() %>%
-    FindVariableFeatures() %>%
-    ScaleData() %>%
-    RunPCA()
-  reduction <- "pca"
+    RunUMAP(reduction = reduction, dims = seq.int(1, params$gex_ambient_removal$cluster_ndims)) %>%
+    FindNeighbors(
+      reduction = reduction,
+      dims = seq.int(1, params$gex_ambient_removal$cluster_ndims),
+      k.param = params$gex_ambient_removal$cluster_k
+    ) %>%
+    FindClusters(resolution = params$gex_ambient_removal$cluster_res)
+
+  decont.gex <- decontX(
+    gex.mat,
+    background = eval(if (exists("empty")) get.10x.matrix(params$gex_matrix, cells = empty, type = "Gene Expression") else NULL),
+    z = Idents(seu)
+  )
+  seu[["decontRNA"]] <- CreateAssayObject(counts = round(decont.gex$decontXcounts))
 }
-
-seu <- seu %>%
-  RunUMAP(reduction = reduction, dims = seq.int(1, params$gex_ambient_removal$cluster_ndims)) %>%
-  FindNeighbors(
-    reduction = reduction,
-    dims = seq.int(1, params$gex_ambient_removal$cluster_ndims),
-    k.param = params$gex_ambient_removal$cluster_k
-  ) %>%
-  FindClusters(resolution = params$gex_ambient_removal$cluster_res)
-
-decont.gex <- decontX(
-  gex.mat,
-  background = eval(if (exists("empty")) get.10x.matrix(params$gex_matrix, cells = empty, type = "Gene Expression") else NULL),
-  z = Idents(seu)
-)
-seu[["decontRNA"]] <- CreateAssayObject(counts = round(decont.gex$decontXcounts))
 
 counts <- Map(
   function(list, assay, obj = seu) {
@@ -235,21 +241,21 @@ counts <- Map(
 )
 ```
 
-```{r gex-ambient-removal-samples, eval=!is.null(params$gex_matrix)}
+```{r gex-ambient-removal-samples, eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip)}
 cat("### Samples", "\n\n")
 UMAPPlot(seu, group.by = "Sample") +
   labs(title = "Samples") +
   theme_minimal()
 ```
 
-```{r gex-ambient-removal-clusters, eval=!is.null(params$gex_matrix)}
+```{r gex-ambient-removal-clusters, eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip)}
 cat("### Clusters", "\n\n")
 UMAPPlot(seu, group.by = "ident") +
   labs(title = "Clusters") +
   theme_minimal()
 ```
 
-```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$gex_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$gex_matrix), !is.null(params$gex_ambient_removal$cluster_markers))}
+```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$gex_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip, !is.null(params$gex_ambient_removal$cluster_markers))}
 cat("### Cluster markers", "\n\n")
 plots <- FeaturePlot(
   seu,
@@ -269,7 +275,7 @@ plots <- FeaturePlot(
 cowplot::plot_grid(plotlist = plots, ncol = 2)
 ```
 
-```{r gex-ambient-removal-diagnostics, eval=!is.null(params$gex_matrix)}
+```{r gex-ambient-removal-diagnostics, eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip)}
 cat("### Diagnostics", "\n\n")
 cat("* **Pre-clustering sample integration:**", ifelse(params$gex_ambient_removal$integrate_samples, "Yes", "No"), "\n")
 cat("* **Graph principal components:**", params$gex_ambient_removal$cluster_ndims, "\n")
@@ -277,7 +283,7 @@ cat("* **Graph nearest neighbours (k):**", params$gex_ambient_removal$cluster_k,
 cat("* **Cluster resolution:**", params$gex_ambient_removal$cluster_res, "\n")
 ```
 
-`r if(!is.null(params$adt_matrix)) "## ADT ambient removal {.tabset}"`
+`r if(!is.null(params$adt_matrix) && !params$adt_ambient_removal$skip) "## ADT ambient removal {.tabset}"`
 
 ```{r adt-ambient-removal, eval=!is.null(params$adt_matrix), include=FALSE}
 seu <- CreateSeuratObject(
@@ -286,38 +292,42 @@ seu <- CreateSeuratObject(
   meta.data = droplet.qc.res
 )
 
-if (params$adt_ambient_removal$integrate_samples) {
-  if (!is.null(params$control)) {
-    seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
-    split.var <- seu$donor_type
-  } else {
-    split.var <- seu$Sample
-  }
-  seu <- split(seu, split.var) %>%
-    NormalizeData(normalization.method = "CLR", margin = 2) %>%
-    ScaleData(features = rownames(seu)) %>%
-    RunPCA(features = rownames(seu)) %>%
-    IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
-  reduction <- "integrated"
+if (params$adt_ambient_removal$skip) {
+  seu[["decontADT"]] <- seu[["ADT"]]
 } else {
+  if (params$adt_ambient_removal$integrate_samples) {
+    if (!is.null(params$control)) {
+      seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
+      split.var <- seu$donor_type
+    } else {
+      split.var <- seu$Sample
+    }
+    seu <- split(seu, split.var) %>%
+      NormalizeData(normalization.method = "CLR", margin = 2) %>%
+      ScaleData(features = rownames(seu)) %>%
+      RunPCA(features = rownames(seu)) %>%
+      IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+    reduction <- "integrated"
+  } else {
+    seu <- seu %>%
+      NormalizeData(normalization.method = "CLR", margin = 2) %>%
+      ScaleData(features = rownames(seu)) %>%
+      RunPCA(features = rownames(seu))
+    reduction <- "pca"
+  }
+
   seu <- seu %>%
-    NormalizeData(normalization.method = "CLR", margin = 2) %>%
-    ScaleData(features = rownames(seu)) %>%
-    RunPCA(features = rownames(seu))
-  reduction <- "pca"
+    RunUMAP(reduction = reduction, dims = seq.int(1, params$adt_ambient_removal$cluster_ndims)) %>%
+    FindNeighbors(
+      reduction = reduction,
+      dims = seq.int(1, params$adt_ambient_removal$cluster_ndims),
+      k.param = params$adt_ambient_removal$cluster_k
+    ) %>%
+    FindClusters(resolution = params$adt_ambient_removal$cluster_res)
+
+  decont.adt <- decontPro(adt.mat, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
+  seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 }
-
-seu <- seu %>%
-  RunUMAP(reduction = reduction, dims = seq.int(1, params$adt_ambient_removal$cluster_ndims)) %>%
-  FindNeighbors(
-    reduction = reduction,
-    dims = seq.int(1, params$adt_ambient_removal$cluster_ndims),
-    k.param = params$adt_ambient_removal$cluster_k
-  ) %>%
-  FindClusters(resolution = params$adt_ambient_removal$cluster_res)
-
-decont.adt <- decontPro(adt.mat, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
-seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 
 counts <- Map(
   function(list, assay, obj = seu) {
@@ -329,21 +339,21 @@ counts <- Map(
 )
 ```
 
-```{r adt-ambient-removal-samples, eval=!is.null(params$adt_matrix)}
+```{r adt-ambient-removal-samples, eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip)}
 cat("### Samples", "\n\n")
 UMAPPlot(seu, group.by = "Sample") +
   labs(title = "Samples") +
   theme_minimal()
 ```
 
-```{r adt-ambient-removal-clusters, eval=!is.null(params$adt_matrix)}
+```{r adt-ambient-removal-clusters, eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip)}
 cat("### Clusters", "\n\n")
 UMAPPlot(seu, group.by = "ident") +
   labs(title = "Clusters") +
   theme_minimal()
 ```
 
-```{r adt-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$adt_matrix), !is.null(params$adt_ambient_removal$cluster_markers))}
+```{r adt-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
 cat("### Cluster markers", "\n\n")
 plots <- FeaturePlot(
   seu,
@@ -360,7 +370,7 @@ plots <- FeaturePlot(
 cowplot::plot_grid(plotlist = plots, ncol = 2)
 ```
 
-```{r adt-ambient-removal-decontaminated-counts, fig.width=3.5*round(sqrt(length(params$adt_ambient_removal$cluster_markers))), fig.height=1.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/round(sqrt(length(params$adt_ambient_removal$cluster_markers)))), eval=all(!is.null(params$adt_matrix), !is.null(params$adt_ambient_removal$cluster_markers))}
+```{r adt-ambient-removal-decontaminated-counts, fig.width=3.5*round(sqrt(length(params$adt_ambient_removal$cluster_markers))), fig.height=1.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/round(sqrt(length(params$adt_ambient_removal$cluster_markers)))), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
 cat("### Decontaminated counts", "\n\n")
 plotDensity(
   GetAssayData(seu, assay = "ADT", layer = "counts"),
@@ -369,7 +379,7 @@ plotDensity(
 )
 ```
 
-```{r adt-ambient-removal-diagnostics, eval=!is.null(params$adt_matrix)}
+```{r adt-ambient-removal-diagnostics, eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip)}
 cat("### Diagnostics", "\n\n")
 cat("* **Pre-clustering sample integration:**", ifelse(params$adt_ambient_removal$integrate_samples, "Yes", "No"), "\n")
 cat("* **Graph principal components:**", params$adt_ambient_removal$cluster_ndims, "\n")
@@ -381,6 +391,7 @@ cat("* **Cluster resolution:**", params$adt_ambient_removal$cluster_res, "\n")
 
 ```{r output}
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
+if (identical(counts$filtered, counts$decontaminated)) counts$decontaminated <- NULL # remove decontaminated matrices if all modalities skipped
 for (type in names(counts)) {
   feature.counts <- sapply(counts[[type]], nrow)
   DropletUtils::write10xCounts(
