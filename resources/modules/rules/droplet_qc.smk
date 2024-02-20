@@ -27,11 +27,14 @@ rule droplet_qc:
         emptydrops_ind_min = config.get("emptydrops_ind_min", None),
         emptydrops_ind_max = config.get("emptydrops_ind_max", None),
         emptydrops_niters = config.get("emptydrops_niters", None),
-        joint_modalities = config.get("joint_modalities", None),
-        joint_ordmag_quantile = config.get("joint_ordmag_quantile", None),
-        joint_ordmag_ratio = config.get("joint_ordmag_ratio", None),
+        multimodal_modalities = config.get("multimodal_modalities", None),
+        multimodal_ordmag_quantile = config.get("multimodal_ordmag_quantile", None),
+        multimodal_ordmag_ratio = config.get("multimodal_ordmag_ratio", None),
         demuxmix_model = config.get("demuxmix_model", None),
         demuxmix_pAcpt = config.get("demuxmix_pAcpt", None),
+        multiplet_calling = config.get("multiplet_calling", None),
+        scdblfinder_clusters = config.get("scdblfinder_clusters", None),
+        scdblfinder_dbr_sd = config.get("scdblfinder_dbr_sd", None),
         multiplet_projection = config.get("multiplet_projection", None)
     conda: "single_cell_qc"
     envmodules: "R-cbrg"

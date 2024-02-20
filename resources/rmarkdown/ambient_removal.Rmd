@@ -19,23 +19,10 @@ params:
   gex_matrix: null
   atac_matrix: null
   adt_matrix: null
-  adt_filters:
-    isotype_control: null
+  adt_filters: !r list("isotype_control" = NULL)
   control: null
-  gex_ambient_removal:
-    skip: false
-    integrate_samples: false
-    cluster_ndims: 10
-    cluster_k: 20
-    cluster_res: 0.05
-    cluster_markers: null
-  adt_ambient_removal:
-    skip: false
-    integrate_samples: false
-    cluster_ndims: 10
-    cluster_k: 20
-    cluster_res: 0.2
-    cluster_markers: null
+  gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
+  adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
 ---
 
 ```{r setup, include=FALSE}
@@ -179,7 +166,9 @@ if (!is.null(params$adt_filters$isotype_control)) {
 
 # Data processing
 
-`r if(!is.null(params$gex_matrix) && !params$gex_ambient_removal$skip) "## GEX ambient removal {.tabset}"`
+`r if ((is.null(params$gex_matrix) || params$gex_ambient_removal$skip) && (is.null(params$adt_matrix) || params$adt_ambient_removal$skip)) "No libraries selected for ambient removal"`
+
+`r if (!is.null(params$gex_matrix) && !params$gex_ambient_removal$skip) "## GEX ambient removal {.tabset}"`
 
 ```{r gex-ambient-removal, eval=!is.null(params$gex_matrix), include=FALSE}
 seu <- CreateSeuratObject(
@@ -255,7 +244,7 @@ UMAPPlot(seu, group.by = "ident") +
   theme_minimal()
 ```
 
-```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$gex_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip, !is.null(params$gex_ambient_removal$cluster_markers))}
+```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*max(ceiling(length(params$gex_ambient_removal$cluster_markers)/2),1), eval=all(!is.null(params$gex_matrix), !params$gex_ambient_removal$skip, !is.null(params$gex_ambient_removal$cluster_markers))}
 cat("### Cluster markers", "\n\n")
 plots <- FeaturePlot(
   seu,
@@ -283,7 +272,7 @@ cat("* **Graph nearest neighbours (k):**", params$gex_ambient_removal$cluster_k,
 cat("* **Cluster resolution:**", params$gex_ambient_removal$cluster_res, "\n")
 ```
 
-`r if(!is.null(params$adt_matrix) && !params$adt_ambient_removal$skip) "## ADT ambient removal {.tabset}"`
+`r if (!is.null(params$adt_matrix) && !params$adt_ambient_removal$skip) "## ADT ambient removal {.tabset}"`
 
 ```{r adt-ambient-removal, eval=!is.null(params$adt_matrix), include=FALSE}
 seu <- CreateSeuratObject(
@@ -353,7 +342,7 @@ UMAPPlot(seu, group.by = "ident") +
   theme_minimal()
 ```
 
-```{r adt-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/2), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
+```{r adt-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*max(ceiling(length(params$adt_ambient_removal$cluster_markers)/2),1), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
 cat("### Cluster markers", "\n\n")
 plots <- FeaturePlot(
   seu,
@@ -370,7 +359,7 @@ plots <- FeaturePlot(
 cowplot::plot_grid(plotlist = plots, ncol = 2)
 ```
 
-```{r adt-ambient-removal-decontaminated-counts, fig.width=3.5*round(sqrt(length(params$adt_ambient_removal$cluster_markers))), fig.height=1.5*ceiling(length(params$adt_ambient_removal$cluster_markers)/round(sqrt(length(params$adt_ambient_removal$cluster_markers)))), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
+```{r adt-ambient-removal-decontaminated-counts, fig.width=3.5*max(round(sqrt(length(params$adt_ambient_removal$cluster_markers))),1), fig.height=1.5*max(ceiling(length(params$adt_ambient_removal$cluster_markers)/max(round(sqrt(length(params$adt_ambient_removal$cluster_markers))),1)),1), eval=all(!is.null(params$adt_matrix), !params$adt_ambient_removal$skip, !is.null(params$adt_ambient_removal$cluster_markers))}
 cat("### Decontaminated counts", "\n\n")
 plotDensity(
   GetAssayData(seu, assay = "ADT", layer = "counts"),

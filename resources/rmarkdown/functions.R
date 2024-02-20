@@ -280,10 +280,10 @@ add.feature.metadata <- function(x,
 }
 
 
-#' Joint cell calling algorithm
+#' Multimodal cell calling algorithm
 #'
 #' @description
-#' Modified implementation of CellRanger ARC joint cell calling algorithm.
+#' Modified implementation of CellRanger ARC cell calling algorithm.
 #'
 #' Algorithm steps:
 #' 1. Compute log10-transformed total counts for each modality per barcode
@@ -306,9 +306,9 @@ add.feature.metadata <- function(x,
 #' @returns Character vector of cell-containing barcodes.
 #'
 #' @export
-joint.cell.caller <- function(matrix.list,
-                              ordmag.quantile = 0.99,
-                              ordmag.ratio = 10) {
+multimodal.cell.caller <- function(matrix.list,
+                                   ordmag.quantile = 0.99,
+                                   ordmag.ratio = 10) {
   if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
   if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
 
