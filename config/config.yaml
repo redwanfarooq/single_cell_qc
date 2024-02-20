@@ -97,12 +97,14 @@ adt_filters:
 # ambient_removal.Rmd
 control: null #default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
+  skip: false # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
   cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
 adt_ambient_removal:
+  skip: false # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
