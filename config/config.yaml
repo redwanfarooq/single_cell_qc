@@ -65,22 +65,25 @@ samples: samples.csv
 # OPTIONAL
 # droplet_qc.Rmd
 pre_filtered: false # default: false
-cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, joint
+cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
 emptydrops_ind_min: 45000 # default: 45000
 emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
-joint_modalities: # default: gex, atac, adt; options: gex, atac, adt
+multimodal_modalities: # default: gex, atac, adt; options: gex, atac, adt
   - gex
   - atac
   - adt
-joint_ordmag_quantile: 0.99 # default: 0.99
-joint_ordmag_ratio: 10 # default: 10
-demuxmix_model: auto # default: auto; options: auto, naive (case-sensitive)
+multimodal_ordmag_quantile: 0.99 # default: 0.99
+multimodal_ordmag_ratio: 10 # default: 10
+demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP (case-sensitive)
+multiplet_calling: true # default: true
+scdblfinder_clusters: true # default: true
+scdblfinder_dbr_sd: 1 # default: 1
+multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
 # libraries_qc.Rmd
 gex_filters:
   library_size: true # default: true
