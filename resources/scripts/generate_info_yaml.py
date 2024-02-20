@@ -6,9 +6,9 @@ Generates info YAML for use with single cell data QC pipeline.
 Requires:
 - Metadata CSV file with the following fields:
     donor: donor ID
-    hash: hash ID
+    pool: pool ID
     sample: sample name
-    hto: hashtag antibody ID
+    hto: hashtag antibody ID (or 'None' if not used)
     cells_loaded: number of cells loaded
 """
 
@@ -51,12 +51,12 @@ def _main(opt: dict) -> None:
     # Read input CSV and check fields are valid
     md = pd.read_csv(opt["--md"], header=0)
     assert set(md.columns).issuperset(
-        {"donor", "hash", "sample", "hto", "cells_loaded"}
+        {"donor", "pool", "sample", "hto", "cells_loaded"}
     ), "Invalid metadata CSV file."
 
     # Add unique sample ID
     md = md.assign(
-        sample_id=lambda x: sample_id(x.donor.tolist(), x.hash.tolist()),
+        sample_id=lambda x: sample_id(x.donor.tolist(), x.pool.tolist()),
     )
 
     # Generate info YAML
