@@ -25,15 +25,15 @@ module: qc
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/project_name/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/project_name/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/qc
+  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /path/to/gex_dir/{sample}/file.ext
-hto_matrix: /path/to/hto_dir/{sample}/file.ext
-atac_matrix: /path/to/atac_dir/{sample}/file.ext
-adt_matrix: /path/to/adt_dir/{sample}/file.ext
+gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+# hto_matrix: /path/to/hto_dir/{sample}/file.ext
+atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
+# adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
