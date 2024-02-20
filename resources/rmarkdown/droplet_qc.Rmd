@@ -255,7 +255,7 @@ for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
   plot <- scatter.plot(
     data = total.counts %>%
       mutate(type = if_else(barcode %in% bc.cells, "Cell", "Empty")) %>%
-      arrange(type) %>%
+      arrange(desc(type)) %>%
       select(all_of(comb), type) %>%
       distinct(),
     x = !!sym(comb[1]),
