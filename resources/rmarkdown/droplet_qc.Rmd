@@ -452,7 +452,11 @@ metadata <- multiplet.res %>%
     Pool = stringr::str_split_i(params$sample_id, pattern = "-", i = 2)
   ) %>%
   tibble::rownames_to_column("Barcode")
-if (exists("demux.res")) metadata$Sample <- sapply(demux.res[metadata$Barcode, ]$Sample, function(x) md[[x]]$sample)
+if (exists("demux.res")) {
+  metadata$Sample <- sapply(demux.res[metadata$Barcode, ]$Sample, function(x) md[[x]]$sample)
+} else {
+  metadata$Sample <- md[[1]]$sample
+}
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write(
   metadata,

@@ -300,17 +300,19 @@ add.feature.metadata <- function(x,
 #' * Generalisation to more than 2 modalities
 #'
 #' @param matrix.list List of raw count matrices.
-#' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for ordmag function.
-#' @param ordmag.ratio Numeric scalar (default 10). Ratio used for ordmag function.
+#' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for OrdMag function.
+#' @param ordmag.ratio Numeric scalar (default 10). Ratio used for OrdMag function.
 #'
 #' @returns Character vector of cell-containing barcodes.
+#'
+#' @export
 joint.cell.caller <- function(matrix.list,
                               ordmag.quantile = 0.99,
                               ordmag.ratio = 10) {
   if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
   if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
 
-  # ordmag function (expects input to be log10-transformed counts)
+  # OrdMag function (expects input to be log10-transformed counts)
   ordmag <- function(x) max(quantile(x, probs = ordmag.quantile) - log10(ordmag.ratio), min(x))
 
   matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
@@ -354,6 +356,7 @@ joint.cell.caller <- function(matrix.list,
   ) %>%
     dplyr::filter(cell) %>%
     dplyr::pull("barcode")
+
   return(cells)
 }
 
