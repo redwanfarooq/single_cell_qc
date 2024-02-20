@@ -15,7 +15,6 @@
 #   qc
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-#       - 'hto_matrix' (input/output)
 module: qc
 
 
@@ -53,9 +52,9 @@ atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_ata
 # Sample hashing summary table in CSV format
 # Required fields:
 #   donor: donor ID
-#   hash: hash ID
+#   pool: pool ID
 #   sample: sample name
-#   hto: hashtag antibody ID
+#   hto: hashtag antibody ID (or 'None' if not used)
 #   cells_loaded: number of cells loaded
 samples: samples.csv
 
@@ -66,7 +65,7 @@ samples: samples.csv
 # OPTIONAL
 # droplet_qc.Rmd
 pre_filtered: false # default: false
-cell_calling_algorithm: "emptydrops" # default: emptydrops; options: emptydrops, joint
+cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, joint
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
