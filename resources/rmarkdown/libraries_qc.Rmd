@@ -280,11 +280,11 @@ if (params$atac_filters$peak_fraction) {
 }
 if (params$atac_filters$blacklist_fraction) {
   seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
-  qc$high_blacklist_fraction <- isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 10) # only exclude extreme outliers
+  qc$high_blacklist_fraction <- isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) # only exclude extreme outliers
 }
 if (params$atac_filters$nucleosome_signal) {
   seu <- NucleosomeSignal(seu)
-  qc$high_nucleosome_signal <- isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 10) # only exclude extreme outliers
+  qc$high_nucleosome_signal <- isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 8) # only exclude extreme outliers
 }
 if (params$atac_filters$tss_enrichment) {
   seu <- TSSEnrichment(seu, fast = FALSE)
