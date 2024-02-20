@@ -24,8 +24,8 @@ module: qc
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/qc/gex_atac
+  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/qc/gex_atac
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
@@ -65,7 +65,7 @@ samples: samples.csv
 # OPTIONAL
 # droplet_qc.Rmd
 pre_filtered: false # default: false
-cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, joint
+cell_calling_algorithm: joint # default: emptydrops; options: emptydrops, joint
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
@@ -97,7 +97,7 @@ adt_filters:
 # ambient_removal.Rmd
 control: null #default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
-  skip: false # default: false
+  skip: true # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
