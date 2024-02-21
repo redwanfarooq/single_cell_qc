@@ -6,6 +6,21 @@
 `%>%` <- magrittr::`%>%` # explicitly define pipe operator
 
 
+#' Modified implementation of CellRanger OrdMag algorithm
+#'
+#' Finds the `q`th quantile of `x` and returns a threshold `r`-fold less
+#' than this value.
+#'
+#' @param x Numeric vector of log10-transformed counts.
+#' @param q Numeric scalar between 0 and 1 (default 0.99).
+#' @param r Numeric scalar greater than 1 (default 10).
+#'
+#' @returns Numeric scalar.
+.ordmag <- function(x, q = 0.99, r = 10) {
+  return(quantile(x, q) - log10(r))
+}
+
+
 #' Update R Markdown params list
 #'
 #' Recursively searches nested named list of default parameters for matching entries
@@ -280,6 +295,37 @@ add.feature.metadata <- function(x,
 }
 
 
+#' Modified implementation of CellRanger empirical expected cell number estimation
+#' algorithm
+#'
+#' Estimates the expected cell number *x* from empirical total UMI counts per barcode
+#' by minimising the loss function (OrdMag(*x*) - *x*)^2 / *x* over the range of *x*
+#' between 10 and 45000 in steps of 10, where OrdMag(*x*) is the number of barcodes
+#' with UMI count above a threshold 10-fold less than the 99th percentile of the top
+#' *x* barcodes.
+#'
+#' @param counts Integer vector of total UMI counts per barcode.
+#'
+#' @returns Integer scalar *x*.
+#'
+#' @export
+estimate.expected.cells <- function(counts) {
+  df <- data.frame(
+    x = seq_along(counts),
+    logcounts = sort(log10(counts), decreasing = TRUE),
+    stat = NA
+  ) %>%
+    filter(x <= 45000)
+
+  for (i in seq.int(from = 10, to = nrow(df), by = 10)) {
+    threshold <- .ordmag(df$logcounts[seq_len(i)])
+    df$stat[i] <- (sum(df$logcounts > threshold) - df$x[i])^2 / df$x[i]
+  }
+
+  return(df$x[match(min(df$stat, na.rm = TRUE), df$stat)])
+}
+
+
 #' Multimodal cell calling algorithm
 #'
 #' @description
@@ -300,6 +346,7 @@ add.feature.metadata <- function(x,
 #' * Generalisation to more than 2 modalities
 #'
 #' @param matrix.list List of raw count matrices.
+#' @param n.expected.cells Integer scalar. Targeted cell recovery.
 #' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for OrdMag function.
 #' @param ordmag.ratio Numeric scalar (default 10). Ratio used for OrdMag function.
 #'
@@ -307,13 +354,11 @@ add.feature.metadata <- function(x,
 #'
 #' @export
 multimodal.cell.caller <- function(matrix.list,
+                                   n.expected.cells,
                                    ordmag.quantile = 0.99,
                                    ordmag.ratio = 10) {
   if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
   if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
-
-  # OrdMag function (expects input to be log10-transformed counts)
-  ordmag <- function(x) max(quantile(x, probs = ordmag.quantile) - log10(ordmag.ratio), min(x))
 
   matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
 
@@ -337,7 +382,21 @@ multimodal.cell.caller <- function(matrix.list,
     dplyr::distinct()
   centers <- deduplicated %>%
     dplyr::mutate(
-      cell = dplyr::if_else(dplyr::if_all(dplyr::everything(), function(x) x > ordmag(x)), TRUE, FALSE)
+      cell = dplyr::if_else(
+        dplyr::if_all(
+          dplyr::everything(),
+          function(x) {
+            threshold <- .ordmag(
+              x = sort(x, decreasing = TRUE)[seq_len(n.expected.cells)],
+              q = ordmag.quantile,
+              r = ordmag.ratio
+            )
+            return(x > threshold)
+          }
+        ),
+        TRUE,
+        FALSE
+      )
     ) %>%
     dplyr::group_by(cell) %>%
     dplyr::summarise(dplyr::across(dplyr::starts_with("logcounts"), mean)) %>%

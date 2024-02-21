@@ -199,9 +199,20 @@ total.counts <- lapply(
 cells <- list()
 empty <- list()
 cc.stats <- list("cells" = 0, "empty" = 0, "limited" = NA)
+
+cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
+  unlist() %>%
+  sum()
+if (cells.loaded > 0) {
+  expected.cells <- cells.loaded * 0.625 # ~62.5% capture rate of cells loaded as per 10x documentation
+} else {
+  expected.cells <- estimate.expected.cells(colSums(gex.mat)) # if cells loaded not available, emprically estimate expected cells using GEX UMI counts
+}
+
 if (params$cell_calling_algorithm %in% c("multimodal", "combined")) {
   cc.res <- multimodal.cell.caller(
     matrix.list = lapply(params$multimodal_modalities[match(modalities, params$multimodal_modalities)], function(x) get(paste(x, "mat", sep = "."))),
+    n.expected.cells = expected.cells,
     ordmag.quantile = params$multimodal_ordmag_quantile,
     ordmag.ratio = params$multimodal_ordmag_ratio
   )
@@ -212,7 +223,7 @@ if (params$cell_calling_algorithm %in% c("emptydrops", "combined")) {
   set.seed(100)
   cc.res <- emptyDropsCellRanger(
     gex.mat,
-    n.expected.cells = sum(sapply(md, function(x) x$cells_loaded)),
+    n.expected.cells = expected.cells,
     umi.min = params$emptydrops_umi_min,
     umi.min.frac.median = params$emptydrops_umi_min_frac_median,
     cand.max.n = params$emptydrops_cand_max_n,
