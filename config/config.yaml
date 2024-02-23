@@ -105,11 +105,21 @@ gex_ambient_removal:
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
-  cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
+  cluster_markers: # default: null; list of cluster marker gene symbols for diagnostic plots
+    - CD3E
+    - MS4A1
+    - LYZ
+    - GNLY
 adt_ambient_removal:
   skip: false # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
-  cluster_markers: null # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+  cluster_markers: # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+    - CD3
+    - CD4
+    - CD8
+    - CD19
+    - CD14
+    - CD16
