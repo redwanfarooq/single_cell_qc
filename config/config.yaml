@@ -15,7 +15,6 @@
 #   qc
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-#       - 'hto_matrix' (input/output)
 module: qc
 
 
@@ -53,9 +52,9 @@ adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cit
 # Sample hashing summary table in CSV format
 # Required fields:
 #   donor: donor ID
-#   hash: hash ID
+#   pool: pool ID
 #   sample: sample name
-#   hto: hashtag antibody ID
+#   hto: hashtag antibody ID (or 'None' if not used)
 #   cells_loaded: number of cells loaded
 samples: samples.csv
 
@@ -65,10 +64,26 @@ samples: samples.csv
 # --------------------------------------------------
 # OPTIONAL
 # droplet_qc.Rmd
+pre_filtered: false # default: false
+cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined
+emptydrops_umi_min: 500 # default: 500
+emptydrops_umi_min_frac_median: 0.01 # default: 0.01
+emptydrops_cand_max_n: 20000 # default: 20000
+emptydrops_ind_min: 45000 # default: 45000
+emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
-demuxmix_model: naive # default: auto; options: auto, naive (case-sensitive)
+multimodal_modalities: # default: gex, atac, adt; options: gex, atac, adt
+  - gex
+  - atac
+  - adt
+multimodal_ordmag_quantile: 0.99 # default: 0.99
+multimodal_ordmag_ratio: 10 # default: 10
+demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_projection: UMAP # default: TSNE; options: TSNE, UMAP (case-sensitive)
+multiplet_calling: true # default: true
+scdblfinder_clusters: true # default: true
+scdblfinder_dbr_sd: 1 # default: 1
+multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
 # libraries_qc.Rmd
 gex_filters:
   library_size: false # default: true
@@ -85,6 +100,7 @@ adt_filters:
 # ambient_removal.Rmd
 control: Control #default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
+  skip: false # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
@@ -95,6 +111,7 @@ gex_ambient_removal:
     - LYZ
     - GNLY
 adt_ambient_removal:
+  skip: false # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20

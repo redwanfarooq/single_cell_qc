@@ -62,9 +62,9 @@ Pipeline requires the following input files/folders:
 1. Preprocessed sequencing data as feature-barcode count matrices (either sparse matrix or CSV format)
 2. Sample hashing summary table in CSV format with the following required fields (with headers):
 - **donor**: donor ID
-- **hash**: hash ID
+- **pool**: pool ID
 - **sample**: sample name
-- **hto**: hashtag antibody ID
+- **hto**: hashtag antibody ID (or 'None' if not used)
 - **cells_loaded**: number of cells loaded
 
 # Output

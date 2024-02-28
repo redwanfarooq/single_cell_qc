@@ -6,6 +6,21 @@
 `%>%` <- magrittr::`%>%` # explicitly define pipe operator
 
 
+#' Modified implementation of CellRanger OrdMag algorithm
+#'
+#' Finds the `q`th quantile of `x` and returns a threshold `r`-fold less
+#' than this value.
+#'
+#' @param x Numeric vector of log10-transformed counts.
+#' @param q Numeric scalar between 0 and 1 (default 0.99).
+#' @param r Numeric scalar greater than 1 (default 10).
+#'
+#' @returns Numeric scalar.
+.ordmag <- function(x, q = 0.99, r = 10) {
+  return(quantile(x, q) - log10(r))
+}
+
+
 #' Update R Markdown params list
 #'
 #' Recursively searches nested named list of default parameters for matching entries
@@ -37,6 +52,26 @@ update.params <- function(user, default = params) {
   }
 
   return(new)
+}
+
+
+#' Prepend index to a string
+#'
+#' Utility function for generating dynamic numbered lists in Markdown. Searches for
+#' a variable named `list.index` in the calling environment which is used to keep a
+#' running count of the index (automatically incremented with each call).
+#'
+#' @param x Character scalar specifying list item.
+#' @param i Integer scalar specifying index.
+#'
+#' @returns A character scalar of `x` prepended with `i`.
+#'
+#' @export
+prepend.index <- function(x) {
+  i <- get("list.index", envir = parent.frame()) %>% as.integer()
+  str <- glue::glue("{i}. {x}")
+  list.index <<- i + 1
+  return(str)
 }
 
 
@@ -280,6 +315,131 @@ add.feature.metadata <- function(x,
 }
 
 
+#' Modified implementation of CellRanger empirical expected cell number estimation
+#' algorithm
+#'
+#' Estimates the expected cell number *x* from empirical total UMI counts per barcode
+#' by minimising the loss function (OrdMag(*x*) - *x*)^2 / *x* over the range of *x*
+#' between 10 and 45000 in steps of 10, where OrdMag(*x*) is the number of barcodes
+#' with UMI count above a threshold 10-fold less than the 99th percentile of the top
+#' *x* barcodes.
+#'
+#' @param counts Integer vector of total UMI counts per barcode.
+#'
+#' @returns Integer scalar *x*.
+#'
+#' @export
+estimate.expected.cells <- function(counts) {
+  df <- data.frame(
+    x = seq_along(counts),
+    logcounts = sort(log10(counts), decreasing = TRUE),
+    stat = NA
+  ) %>%
+    filter(x <= 45000)
+
+  for (i in seq.int(from = 10, to = nrow(df), by = 10)) {
+    threshold <- .ordmag(df$logcounts[seq_len(i)])
+    df$stat[i] <- (sum(df$logcounts > threshold) - df$x[i])^2 / df$x[i]
+  }
+
+  return(df$x[match(min(df$stat, na.rm = TRUE), df$stat)])
+}
+
+
+#' Multimodal cell calling algorithm
+#'
+#' @description
+#' Modified implementation of CellRanger ARC cell calling algorithm.
+#'
+#' Algorithm steps:
+#' 1. Compute log10-transformed total counts for each modality per barcode
+#' 2. Filter to barcodes with count >= 1 for every modality
+#' 3. Deduplicate barcodes with identical counts across all modalities
+#' 4. Determine initial thresholds for cell-containing barcodes using OrdMag algorithm
+#'    for each modality and compute centroids for cell-containing and empty barcodes
+#' 5. Peform k-means clustering (k = 2) initialised using centroids from OrdMag-based
+#'    thresholds and update barcode labels based on cluster assignment
+#' 6. Project barcode labels from deduplicated set to full set
+#'
+#' Key differences from CellRanger ARC implementation are:
+#' * Lack of initial pre-filtering steps
+#' * Generalisation to more than 2 modalities
+#'
+#' @param matrix.list List of raw count matrices.
+#' @param n.expected.cells Integer scalar. Targeted cell recovery.
+#' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for OrdMag function.
+#' @param ordmag.ratio Numeric scalar (default 10). Ratio used for OrdMag function.
+#'
+#' @returns Character vector of cell-containing barcodes.
+#'
+#' @export
+multimodal.cell.caller <- function(matrix.list,
+                                   n.expected.cells,
+                                   ordmag.quantile = 0.99,
+                                   ordmag.ratio = 10) {
+  if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
+  if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
+
+  matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
+
+  logcounts <- Map(
+    f = function(x, i) {
+      data.frame(log10(colSums(x))) %>%
+        setNames(paste("logcounts", i, sep = ".")) %>%
+        tibble::rownames_to_column("barcode")
+    },
+    x = matrix.list,
+    i = names(matrix.list)
+  ) %>%
+    Reduce(
+      x = .,
+      f = function(x, y) dplyr::full_join(x, y, by = "barcode")
+    ) %>%
+    dplyr::filter(dplyr::if_all(dplyr::everything(), function(x) !is.na(x)))
+
+  deduplicated <- logcounts %>%
+    dplyr::select(dplyr::starts_with("logcounts")) %>%
+    dplyr::distinct()
+  centers <- deduplicated %>%
+    dplyr::mutate(
+      cell = dplyr::if_else(
+        dplyr::if_all(
+          dplyr::everything(),
+          function(x) {
+            threshold <- .ordmag(
+              x = sort(x, decreasing = TRUE)[seq_len(n.expected.cells)],
+              q = ordmag.quantile,
+              r = ordmag.ratio
+            )
+            return(x > threshold)
+          }
+        ),
+        TRUE,
+        FALSE
+      )
+    ) %>%
+    dplyr::group_by(cell) %>%
+    dplyr::summarise(dplyr::across(dplyr::starts_with("logcounts"), mean)) %>%
+    dplyr::arrange(cell) %>%
+    tibble::column_to_rownames("cell") %>%
+    as.matrix()
+  deduplicated <- deduplicated %>%
+    dplyr::mutate(
+      cell = dplyr::case_match(kmeans(x = ., centers = centers)$cluster, 1 ~ FALSE, 2 ~ TRUE)
+    )
+
+  cells <- dplyr::left_join(
+    x = logcounts,
+    y = deduplicated,
+    by = paste("logcounts", names(matrix.list), sep = ".")
+  ) %>%
+    dplyr::filter(cell) %>%
+    dplyr::pull("barcode")
+
+  return(cells)
+}
+
+
 #' Generate scatter plot
 #'
 #' Makes a scatter plot.
@@ -446,22 +606,21 @@ bar.plot <- function(data,
 #' Generate barcode rank plot
 #'
 #' Makes a barcode rank plot coloured by fraction of barcodes at each rank called
-#' as cells using the output of [DropletUtils::barcodeRanks()] and
-#' [DropletUtils::emptyDrops()].
+#' as cells using the output of [DropletUtils::barcodeRanks()].
 #'
 #' @param bcrank.res DataFrame output of [DropletUtils::barcodeRanks()].
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
+#' @param cells Character vector of cell-containing barcodes.
 #' @param ... Arguments to pass to [scatter.plot()]
 #'
 #' @returns Plot object.
 #'
 #' @export
-bcrank.plot <- function(bcrank.res, ed.res, ...) {
+bcrank.plot <- function(bcrank.res, cells, ...) {
   data <- bcrank.res %>%
     as.data.frame() %>%
-    cbind(FDR = ed.res$FDR) %>%
-    dplyr::group_by(rank, total) %>%
-    dplyr::summarise(fraction.cells = sum(FDR <= 0.001, na.rm = TRUE) / dplyr::n())
+    dplyr::mutate(cell = dplyr::if_else(rownames(.) %in% cells, TRUE, FALSE)) %>%
+    dplyr::group_by(rank, total, cell) %>%
+    dplyr::summarise(fraction.cells = sum(cell) / dplyr::n())
 
   plot <- scatter.plot(
     data,
