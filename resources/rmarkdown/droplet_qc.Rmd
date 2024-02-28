@@ -112,19 +112,35 @@ if (!params$pre_filtered && params$cell_calling_algorithm %in% c("multimodal", "
 
 # Initialise barcodes list
 bc <- list()
+
+# Initialise list index
+list.index <- 1
 ```
 
 ### Sample: `r params$sample_id`
 
 # Overview
 
-1. Load count matrices
-2. Run cell calling algorithm to filter empty droplet barcodes (if matrices are not pre-filtered to only cell-containing barcodes)
-3. Run HTO demultiplexing algorithm to classify barcodes as 'singlet' (with assigned HTO), 'multiplet', 'negative' or 'uncertain' (if HTO matrix provided)
-4. Run multiplet calling algorithm
-    * Predict intra-sample multiplets based on known inter-sample multiplets (if HTO matrix provided)
-    * Predict multiplets based on simulated doublets (if HTO matrix not provided)
-5. Output TSV file containing cell metadata for barcodes passing QC filters and text file containing list of empty droplet barcodes (if matrices are not pre-filtered to only cell-containing barcodes)
+```{r overview}
+cat(prepend.index("Load count matrices"), "\n")
+if (!params$pre_filtered) {
+  cat(prepend.index("Run cell calling algorithm to filter empty droplet barcodes"), "\n")
+}
+if (!is.null(params$hto_matrix)) {
+  cat(prepend.index("Run HTO demultiplexing algorithm to classify barcodes as 'singlet' (with assigned HTO), 'multiplet', 'negative' or 'uncertain'"), "\n")
+}
+if (params$multiplet_calling) {
+  if (is.null(params$hto_matrix)) {
+    cat(prepend.index("Predict multiplets based on simulated doublets"), "\n")
+  } else {
+    cat(prepend.index("Predict intra-sample multiplets based on known inter-sample multiplets"), "\n")
+  }
+}
+cat(prepend.index("Output TSV file containing barcode metadata"), "\n")
+if (!params$pre_filtered) {
+  cat(prepend.index("Output text file containing list of empty droplet barcodes"), "\n")
+}
+```
 
 # Data loading
 

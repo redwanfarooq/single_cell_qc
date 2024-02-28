@@ -86,15 +86,28 @@ if (any(is.missing)) {
 
 # Initialise results list
 bc <- list()
+
+# Initialise list index
+list.index <- 1
 ```
 
 ### Sample: `r params$sample_id`
 
 # Overview
 
-1. Load count matrices and subset to common barcodes that passed droplet processing QC
-2. Calculate QC metrics and discard outliers on 1 or more metrics
-3. Output text file containing list of barcodes passing QC filters
+```{r overview}
+cat(prepend.index("Load count matrices and subset to common barcodes that passed droplet processing QC"), "\n")
+if (!is.null(params$gex_matrix)) {
+  cat(prepend.index("Calculate GEX QC metrics and discard outliers on 1 or more metrics"), "\n")
+}
+if (!is.null(params$atac_matrix)) {
+  cat(prepend.index("Calculate ATAC QC metrics and discard outliers on 1 or more metrics"), "\n")
+}
+if (!is.null(params$adt_matrix)) {
+  cat(prepend.index("Calculate ADT QC metrics and discard outliers on 1 or more metrics"), "\n")
+}
+cat(prepend.index("Output text file containing list of barcodes passing all QC filters"), "\n")
+```
 
 # Data loading
 
