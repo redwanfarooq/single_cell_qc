@@ -55,6 +55,26 @@ update.params <- function(user, default = params) {
 }
 
 
+#' Prepend index to a string
+#'
+#' Utility function for generating dynamic numbered lists in Markdown. Searches for
+#' a variable named `list.index` in the calling environment which is used to keep a
+#' running count of the index (automatically incremented with each call).
+#'
+#' @param x Character scalar specifying list item.
+#' @param i Integer scalar specifying index.
+#'
+#' @returns A character scalar of `x` prepended with `i`.
+#'
+#' @export
+prepend.index <- function(x) {
+  i <- get("list.index", envir = parent.frame()) %>% as.integer()
+  str <- glue::glue("{i}. {x}")
+  list.index <<- i + 1
+  return(str)
+}
+
+
 #' Get 10x count matrix
 #'
 #' Loads 10x count matrix (in matrix market format).

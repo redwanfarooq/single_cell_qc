@@ -84,15 +84,28 @@ if (any(is.missing)) {
 
 # Initialise results list
 counts <- list("filtered" = list(), "decontaminated" = list())
+
+# Initialise list index
+list.index <- 1
 ```
 
 ### Sample: `r params$sample_id`
 
 # Overview
 
-1. Load count matrices and subset to barcodes that passed libraries processing QC
-2. Perform coarse clustering and run decontamination algorithm to remove ambient counts (GEX and ADT libraries only)
-3. Output filtered and decontaminated count matrices in 10x HDF5 format
+```{r overview}
+cat(prepend.index("Load count matrices and subset to barcodes that passed libraries QC"), "\n")
+if (!is.null(params$gex_matrix) && !params$gex_ambient_removal$skip) {
+  cat(prepend.index("Perform coarse clustering and run decontamination algorithm to remove GEX ambient counts"), "\n")
+}
+if (!is.null(params$adt_matrix) && !params$adt_ambient_removal$skip) {
+  cat(prepend.index("Perform coarse clustering and run decontamination algorithm to remove ADT ambient counts"), "\n")
+}
+cat(prepend.index("Output filtered count matrices in 10x HDF5 format"), "\n")
+if ((!is.null(params$gex_matrix) && !params$gex_ambient_removal$skip) || (!is.null(params$adt_matrix) && !params$adt_ambient_removal$skip)) {
+  cat(prepend.index("Output decontaminated count matrices in 10x HDF5 format"), "\n")
+}
+```
 
 # Data loading
 
