@@ -18,11 +18,14 @@ with open(file=os.path.join(config.get("metadata_dir", "metadata"), "info.yaml")
 for key, value in parse_info(info).items():
     globals()[key] = value
 
+# Set module rules list
+module_rules = [$RULES_TO_STR]
+
 # Import rules
 $LOAD
 
-# Set targets
-targets = [x for rule in [$RULES] for x in rule]
+# Set targets list
+targets = [x for rule in [$RULES_TO_VAR] for x in rule]
 # --------------------------------------------------
 
 

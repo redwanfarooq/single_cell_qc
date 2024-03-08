@@ -50,7 +50,7 @@ if (exists("snakemake")) {
   log <- file(snakemake@log[[1]], open = "w")
   sink(log, type = "message") # write stderr to Snakemake log file
 
-  snakemake@source("functions.R")
+  snakemake@source("utils.R")
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
@@ -60,7 +60,7 @@ if (exists("snakemake")) {
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
 } else {
   # if running in isolation
-  source("functions.R")
+  source("utils.R")
 }
 
 # Replace path placeholders
@@ -184,7 +184,7 @@ ggplotly(
     x = Sample,
     y = sum,
     colour = low_lib_size,
-    size = 0.5,
+    size = 0.1,
     title = "Low library size",
     x.lab = "Sample",
     y.lab = "Total UMI count",
@@ -203,7 +203,7 @@ ggplotly(
     x = Sample,
     y = detected,
     colour = low_lib_complexity,
-    size = 0.5,
+    size = 0.1,
     title = "Low library complexity",
     x.lab = "Sample",
     y.lab = "Total genes detected",
@@ -222,7 +222,7 @@ ggplotly(
     x = Sample,
     y = subsets_mito_percent,
     colour = high_mito_percent,
-    size = 0.5,
+    size = 0.1,
     title = "High mitochondrial fraction",
     x.lab = "Sample",
     y.lab = "Percentage mitochondrial genes"
@@ -246,26 +246,41 @@ if (params$gex_filters$mitochondrial_fraction) {
   cat("  + **High mitochondrial fraction:**", sum(sce$high_mito_percent, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
-ggplotly(
-  scatter.plot(
-    colData(sce),
-    x = sum,
-    y = subsets_mito_percent,
-    size = 0.5,
-    colour = discard,
-    title = "Cells excluded",
-    x.lab = "Total UMI count",
-    y.lab = "Percentage mitochondrial genes"
-  ) +
-    scale_colour_manual(values = c("grey80", "#d82526")),
-  tooltip = c("x", "y", "colour")
-)
+scatter.plot(
+  colData(sce) %>%
+    as.data.frame() %>%
+    arrange(discard),
+  x = sum,
+  y = subsets_mito_percent,
+  size = 0.1,
+  colour = discard,
+  title = "Cells excluded",
+  x.lab = "Total UMI count",
+  y.lab = "Percentage mitochondrial genes",
+  log = "x"
+) +
+  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
+cat("\n\n")
+scatter.plot(
+  colData(sce) %>%
+    as.data.frame() %>%
+    arrange(discard),
+  x = sum,
+  y = detected,
+  size = 0.1,
+  colour = discard,
+  title = "Cells excluded",
+  x.lab = "Total UMI count",
+  y.lab = "Total genes detected",
+  log = TRUE
+) +
+  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
 ```
 
 ```{r atac-qc-metrics, eval=!is.null(params$atac_matrix)}
 cat("## ATAC QC metrics {.tabset}", "\n\n")
 fragments <- CreateFragmentObject(file.path(dirname(params$atac_matrix), "../fragments.tsv.gz"), cells = bc.common)
-annotation <- GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86)
+annotation <- GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86) %>% suppressWarnings()
 seqlevelsStyle(annotation) <- "UCSC"
 seu <- CreateSeuratObject(
   counts = CreateChromatinAssay(
@@ -305,6 +320,7 @@ if (params$atac_filters$tss_enrichment) {
 qc$discard <- Reduce(`|`, qc, init = FALSE)
 seu <- add.cell.metadata(seu, qc)
 bc$atac <- colnames(seu[, !seu$discard | is.na(seu$discard)])
+summary.stats$ATAC <- !qc$discard
 ```
 
 ```{r atac-qc-peak-count, eval=all(!is.null(params$atac_matrix), params$atac_filters$peak_count)}
@@ -315,7 +331,7 @@ ggplotly(
     x = Sample,
     y = sum,
     colour = low_peak_count,
-    size = 0.5,
+    size = 0.1,
     title = "Low total reads in peaks",
     x.lab = "Sample",
     y.lab = "Total reads in peaks",
@@ -334,7 +350,7 @@ ggplotly(
     x = Sample,
     y = FRiP * 100,
     colour = low_peak_fraction,
-    size = 0.5,
+    size = 0.1,
     title = "Low fraction reads in peaks",
     x.lab = "Sample",
     y.lab = "Percentage reads in peaks"
@@ -352,7 +368,7 @@ ggplotly(
     x = Sample,
     y = blacklist_fraction * 100,
     colour = high_blacklist_fraction,
-    size = 0.5,
+    size = 0.1,
     title = "High blacklist fraction",
     x.lab = "Sample",
     y.lab = "Percentage reads in genomic blacklist regions"
@@ -370,7 +386,7 @@ ggplotly(
     x = Sample,
     y = nucleosome_signal,
     colour = high_nucleosome_signal,
-    size = 0.5,
+    size = 0.1,
     title = "High nucleosome signal",
     x.lab = "Sample",
     y.lab = "Nucleosome signal"
@@ -388,7 +404,7 @@ ggplotly(
     x = Sample,
     y = TSS.enrichment,
     colour = low_tss_enrichment,
-    size = 0.5,
+    size = 0.1,
     title = "Low TSS enrichment score",
     x.lab = "Sample",
     y.lab = "TSS enrichment score"
@@ -459,7 +475,7 @@ if (is.null(params$adt_filters$isotype_control)) {
       x = Sample,
       y = ambient.scale,
       colour = high.ambient,
-      size = 0.5,
+      size = 0.1,
       title = "High ambient contamination",
       x.lab = "Sample",
       y.lab = "Relative ambient contamination"
@@ -475,7 +491,7 @@ if (is.null(params$adt_filters$isotype_control)) {
       x = Sample,
       y = sum.controls,
       colour = high.controls,
-      size = 0.5,
+      size = 0.1,
       title = "High non-specific binding",
       x.lab = "Sample",
       y.lab = "Total isotype control antibody count"
@@ -502,10 +518,19 @@ if (is.null(params$adt_filters$isotype_control)) {
 
 ```{r output}
 bc.pass <- Reduce(intersect, bc, init = rownames(droplet.qc.res))
+summary.stats <- summary.stats %>%
+  mutate(All = if_all(everything())) %>%
+  tibble::rownames_to_column("Barcode")
+
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write_lines(
   bc.pass,
   file = file.path(params$outdir, "cell_barcodes.txt")
+)
+vroom::vroom_write(
+  summary.stats,
+  file = file.path(params$outdir, "qc_filters.tsv"),
+  delim = "\t"
 )
 
 cat("* **Total cells passed:**", length(bc.pass) %>% format(big.mark = ","), "\n")

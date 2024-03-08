@@ -57,6 +57,7 @@ set-threads:
   droplet_qc: 1
   libraries_qc: 1
   ambient_removal: 1
+  summary: 1
 # 'mem' and 'runtime' are Snakemake standard resources
 # Values supplied are parsed by the 'humanfriendly'
 # package
@@ -76,3 +77,6 @@ set-resources:
   ambient_removal:
     mem: 128GiB
     runtime: 3h
+  summary:
+    mem: 1GiB
+    runtime: 1h

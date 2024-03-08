@@ -2,7 +2,7 @@
 
 
 """
-Generates module scripts for single cell data QC pipeline.
+Generates module scripts for preprocessing pipeline.
 Requires:
     - Module rule specifications file
         YAML format with module names as keys and lists of module rules as values
@@ -25,7 +25,7 @@ from loguru import logger
 # ==============================
 # Define options
 DOC = """
-Generate module scripts for single cell data QC pipeline
+Generate module scripts for preprocessing pipeline
 
 Usage:
   generate_modules.py --modules=<modules> --template=<template> --outdir=<outdir> [options]
@@ -44,7 +44,8 @@ Options:
 # GLOBAL VARIABLES
 # ==============================
 LOAD = "include: 'rules/{}.smk'"
-RULES = "{}"
+QUO = "'{}'"
+UNQUO = "{}"
 
 
 # ==============================
@@ -68,7 +69,7 @@ def _main(opt: dict) -> None:
         )
         logger.success(
             "Output file: {}",
-            os.path.abspath(os.path.join(opt["--outdir"], f"{name}.smk"))
+            os.path.abspath(os.path.join(opt["--outdir"], f"{name}.smk")),
         )
 
 
@@ -76,7 +77,7 @@ def generate_module(
     name: str, rules: list[str], template: str, filename: str | None = None
 ) -> str:
     """
-    Generate module script for single cell data QC pipeline.
+    Generate module script for preprocessing pipeline.
 
     Arguments:
         ``rules``: List of rules used in pipeline module.\n
@@ -92,7 +93,8 @@ def generate_module(
     out = template.substitute(
         NAME=f"{name}",
         LOAD="\n".join([LOAD.format(x) for x in rules]),
-        RULES=", ".join([RULES.format(x) for x in rules]),
+        RULES_TO_STR=", ".join([QUO.format(x) for x in rules]),
+        RULES_TO_VAR=", ".join([UNQUO.format(x) for x in rules]),
     )
 
     if filename is not None:
