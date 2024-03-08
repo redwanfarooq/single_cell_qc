@@ -33,12 +33,12 @@ gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cit
 hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
+# File path to TSV file containing total sequencing read counts per library type/sample
+# MUST contain column 'sample' and 1 column per library type
+read_counts: /path/to/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
-# If 'rmd_dir' not specified, defaults to
-# 'resources/rmarkdown'
-# rmd_dir:
 # If 'metadata_dir' not specified, defaults to
 # 'metadata'
 # metadata_dir:
@@ -98,7 +98,7 @@ atac_filters:
 adt_filters:
   isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
-control: Control #default: null; control sample (i.e. cross-batch technical replicate)
+control: Control # default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   skip: false # default: false
   integrate_samples: false # default: false
@@ -123,3 +123,9 @@ adt_ambient_removal:
     - CD19
     - CD14
     - CD16
+# summary_report.qmd
+target_depth:
+  GEX: 20000 # default: 20000
+  ATAC: 25000 # default: 25000
+  ADT: 5000 # default: 5000
+  HTO: 2000 # default: 2000
