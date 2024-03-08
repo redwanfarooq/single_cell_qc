@@ -35,7 +35,7 @@ hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cit
 adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /path/to/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -65,7 +65,7 @@ samples: samples.csv
 # OPTIONAL
 # droplet_qc.Rmd
 pre_filtered: false # default: false
-cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined
+cell_calling_algorithm: combined # default: emptydrops; options: emptydrops, multimodal, combined
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
@@ -127,5 +127,5 @@ adt_ambient_removal:
 target_depth:
   GEX: 20000 # default: 20000
   ATAC: 25000 # default: 25000
-  ADT: 5000 # default: 5000
+  ADT: 10000 # default: 5000
   HTO: 2000 # default: 2000
