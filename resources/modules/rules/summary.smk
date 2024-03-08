@@ -34,8 +34,7 @@ rule summary:
 			-P samples:{params.samples} \
             -P read_counts:{params.read_counts} \
             -P target_depth:{params.target_depth} && \
-		rm summary_report.qmd && \
-		touch {output} \
+		rm summary_report.qmd \
 		) > {log} 2>&1
         """
 
