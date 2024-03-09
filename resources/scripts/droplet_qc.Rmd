@@ -488,7 +488,7 @@ ggplotly(
 )
 ```
 
-# Output
+# Summary
 
 ```{r output}
 metadata <- data.frame(
@@ -573,8 +573,6 @@ cat("* **Total barcodes excluded:**", sum(cc.excluded, demux.excluded, multiplet
 if (!is.na(cc.excluded)) cat("  + **Empty droplets:**", cc.excluded %>% format(big.mark = ","), "\n")
 if (!is.na(demux.excluded)) cat("  + **Negative/uncertain HTO:**", demux.excluded %>% format(big.mark = ","), "\n")
 if (!is.na(multiplet.excluded)) cat("  + **Multiplets:**", multiplet.excluded %>% format(big.mark = ","), "\n")
-cat("\n\n")
-metadata
 ```
 
 # Session Info
