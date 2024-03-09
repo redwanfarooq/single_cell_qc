@@ -388,8 +388,6 @@ cat("* **Graph nearest neighbours (k):**", params$adt_ambient_removal$cluster_k,
 cat("* **Cluster resolution:**", params$adt_ambient_removal$cluster_res, "\n")
 ```
 
-# Output
-
 ```{r output}
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 if (identical(counts$filtered, counts$decontaminated)) counts$decontaminated <- NULL # remove decontaminated matrices if all modalities skipped
@@ -404,8 +402,6 @@ for (type in names(counts)) {
     overwrite = TRUE
   )
 }
-
-cat("* **Output path:**", params$outdir, "\n")
 ```
 
 # Session Info

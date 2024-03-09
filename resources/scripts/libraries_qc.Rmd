@@ -172,9 +172,9 @@ qc <- data.frame(row.names = colnames(sce))
 if (params$gex_filters$library_size) qc$low_lib_size <- isOutlier(sce$sum, type = "lower", log = TRUE)
 if (params$gex_filters$library_complexity) qc$low_lib_complexity <- isOutlier(sce$detected, type = "lower", log = TRUE)
 if (params$gex_filters$mitochondrial_fraction) qc$high_mito_percent <- isOutlier(sce$subsets_mito_percent, type = "higher", log = FALSE)
-qc$discard <- Reduce(`|`, qc, init = FALSE)
+qc$discard <- combine.filters(qc)
 sce <- add.cell.metadata(sce, qc)
-bc$gex <- colnames(sce[, !sce$discard | is.na(sce$discard)])
+bc$gex <- colnames(sce[, !sce$discard])
 summary.stats$GEX <- !qc$discard
 ```
 
@@ -319,9 +319,9 @@ if (params$atac_filters$tss_enrichment) {
   seu <- TSSEnrichment(seu, fast = FALSE)
   qc$low_tss_enrichment <- isOutlier(seu$TSS.enrichment, type = "lower", log = FALSE)
 }
-qc$discard <- Reduce(`|`, qc, init = FALSE)
+qc$discard <- combine.filters(qc)
 seu <- add.cell.metadata(seu, qc)
-bc$atac <- colnames(seu[, !seu$discard | is.na(seu$discard)])
+bc$atac <- colnames(seu[, !seu$discard])
 summary.stats$ATAC <- !qc$discard
 ```
 
@@ -460,12 +460,14 @@ sce <- SingleCellExperiment(assays = list(counts = adt.mat)) %>%
   add.cell.metadata(droplet.qc.res)
 if (is.null(params$adt_filters$isotype_control)) {
   qc <- cleanTagCounts(sce)
+  qc$discard <- combine.filters(list(qc$zero.ambient, qc$high.ambient))
 } else {
   is.control <- grep(pattern = params$adt_filters$isotype_control, rownames(sce))
   qc <- cleanTagCounts(sce, controls = is.control)
+  qc$discard <- combine.filters(list(qc$zero.ambient, qc$high.controls))
 }
 sce <- add.cell.metadata(sce, qc)
-bc$adt <- colnames(sce[, !sce$discard | is.na(sce$discard)])
+bc$adt <- colnames(sce[, !sce$discard])
 summary.stats$ADT <- !qc$discard
 ```
 
@@ -517,7 +519,7 @@ if (is.null(params$adt_filters$isotype_control)) {
 }
 ```
 
-# Output
+# Summary
 
 ```{r output}
 bc.pass <- Reduce(intersect, bc, init = rownames(droplet.qc.res))

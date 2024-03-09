@@ -440,6 +440,30 @@ multimodal.cell.caller <- function(matrix.list,
 }
 
 
+#' Combine results of multiple QC filters
+#'
+#' Takes a list or data frame of QC filtering results (logical vectors with
+#' 1 element per cell barcode) and combines the results to identify barcodes which
+#' have passed all filters.
+#'
+#' @param filters List or data frame of logical vectors.
+#' @param missing Logical scalar (default FALSE). Value to convert NA values
+#' in `filters` to prior to combining results.
+#'
+#' @returns Logical vector.
+#'
+#' @export
+combine.filters <- function(filters, missing = FALSE) {
+  if ((!is.list(filters) || !is.data.frame(filters)) && !all(sapply(filters, is.logical))) stop("filters must be a list of logical vectors")
+
+  for (i in seq_along(filters)) {
+    filters[[i]] <- ifelse(is.na(filters[[i]]), missing, filters[[i]])
+  }
+
+  return(Reduce(magrittr::or, filters, init = FALSE))
+}
+
+
 #' Generate scatter plot
 #'
 #' Makes a scatter plot.
