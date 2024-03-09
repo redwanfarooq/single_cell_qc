@@ -15,11 +15,11 @@ rule summary:
     threads: 1
     params:
         script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
-		input_dir = config["output_dir"]["data"],
-		samples = ",".join(samples),
+        input_dir = config["output_dir"]["data"],
+        samples = ",".join(samples),
         read_counts = config.get("read_counts", ""),
         target_depth = ",".join([f"{k}:{v}" for k, v in config.get("target_depth", {"GEX": 20000, "ATAC": 25000, "ADT": 5000, "HTO": 2000}).items()]),
-		output_path = os.path.join(config["output_dir"]["reports"], "summary")
+        output_path = os.path.join(config["output_dir"]["reports"], "summary")
     conda: "quarto"
     # envmodules: "python-cbrg"
     message: "Generating summary report"
@@ -38,4 +38,4 @@ rule summary:
 		) > {log} 2>&1
         """
 
-summary = os.path.join(config["output_dir"]["reports"], "summary/summary_report.html")
+summary = [os.path.join(config["output_dir"]["reports"], "summary/summary_report.html")]
