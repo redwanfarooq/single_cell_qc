@@ -334,7 +334,7 @@ density function per hashtag (measure of signal-to-noise ratio; ideal >0.99, acc
 if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     df_signal_strength = [
         pd.read_csv(files[1], sep="\t", header=0, index_col=None)
-        .apply(lambda x: pd.to_numeric(x, downcast="integer", errors="coerce"))
+        .apply(lambda x: pd.to_numeric(x, downcast="float", errors="coerce"))
         .apply(lambda x: round(1 - x, ndigits=3))
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
@@ -349,7 +349,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
     ]
-    df_assignment = reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment)
+    df_assignment = reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment).convert_dtypes()
 
     cols = ["Sample"] + list(
         df_signal_strength.columns[df_signal_strength.columns != "Sample"]
@@ -522,7 +522,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     df_assignment = pd.crosstab(
         index=df_assignment["Sample"],
         columns=df_assignment["Assignment"],
-    ).reset_index()
+    ).reset_index().convert_dtypes()
 
     df_qc_metrics = df_qc_metrics.merge(
         df_assignment,

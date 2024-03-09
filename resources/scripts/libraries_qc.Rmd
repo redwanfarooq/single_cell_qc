@@ -149,6 +149,7 @@ bc$adt <- colnames(adt.mat)
 
 ```{r subset-barcodes}
 bc.common <- Reduce(intersect, bc)
+summary.stats <- data.frame(row.names = bc.common)
 droplet.qc.res <- droplet.qc.res[bc.common, ]
 if (exists("gex.mat")) gex.mat <- gex.mat[, bc.common]
 if (exists("atac.mat")) atac.mat <- atac.mat[, bc.common]
@@ -174,6 +175,7 @@ if (params$gex_filters$mitochondrial_fraction) qc$high_mito_percent <- isOutlier
 qc$discard <- Reduce(`|`, qc, init = FALSE)
 sce <- add.cell.metadata(sce, qc)
 bc$gex <- colnames(sce[, !sce$discard | is.na(sce$discard)])
+summary.stats$GEX <- !qc$discard
 ```
 
 ```{r gex-qc-library-size, eval=all(!is.null(params$gex_matrix), params$gex_filters$library_size)}
@@ -254,12 +256,12 @@ scatter.plot(
   y = subsets_mito_percent,
   size = 0.1,
   colour = discard,
-  title = "Cells excluded",
+  title = "Cells excluded (library size vs mitochondrial fraction)",
   x.lab = "Total UMI count",
   y.lab = "Percentage mitochondrial genes",
   log = "x"
 ) +
-  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
+  scale_colour_manual(values = c("grey80", "#d82526"))
 cat("\n\n")
 scatter.plot(
   colData(sce) %>%
@@ -269,12 +271,12 @@ scatter.plot(
   y = detected,
   size = 0.1,
   colour = discard,
-  title = "Cells excluded",
+  title = "Cells excluded (library size vs library complexity)",
   x.lab = "Total UMI count",
   y.lab = "Total genes detected",
   log = TRUE
 ) +
-  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
+  scale_colour_manual(values = c("grey80", "#d82526"))
 ```
 
 ```{r atac-qc-metrics, eval=!is.null(params$atac_matrix)}
@@ -464,6 +466,7 @@ if (is.null(params$adt_filters$isotype_control)) {
 }
 sce <- add.cell.metadata(sce, qc)
 bc$adt <- colnames(sce[, !sce$discard | is.na(sce$discard)])
+summary.stats$ADT <- !qc$discard
 ```
 
 ```{r adt-ambient-contamination-isotype-control, eval=!is.null(params$adt_matrix)}

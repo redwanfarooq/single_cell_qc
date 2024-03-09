@@ -362,7 +362,7 @@ gex.mat <- gex.mat[, bc.cells]
 
 ```{r hto-demultiplexing-classification, eval=!is.null(params$hto_matrix)}
 cat("### Classification", "\n\n")
-cat(sprintf("* **%s:** %s", names(demux.stats)[names(demux.stats) != "singlet"], format(demux.stats[names(demux.stats) != "singlet"], big.mark = ",")) %>% paste(collapse = "\n"), "\n")
+cat(sprintf("* **%s:** %s", names(demux.stats)[names(demux.stats) != "singlet"], format(as.integer(demux.stats[names(demux.stats) != "singlet"]), big.mark = ",")) %>% paste(collapse = "\n"), "\n")
 cat("\n\n")
 ggplotly(
   bar.plot(
@@ -471,7 +471,7 @@ bc.cells <- multiplet.res %>%
 
 ```{r multiplet-calling-classification, eval=params$multiplet_calling}
 cat("### Classification", "\n\n")
-cat("* **Singlets:**", multiplet.stats$singlets %>% format(big.mark = ","), "\n")
+cat("* **Singlets:**", multiplet.stats$singlet %>% format(big.mark = ","), "\n")
 cat("* **Known (inter-sample) multiplets:**", multiplet.stats$known %>% format(big.mark = ","), "\n")
 cat("* **Predicted (intra-sample) multiplets:**", multiplet.stats$predicted %>% format(big.mark = ","), "\n")
 cat("\n\n")
