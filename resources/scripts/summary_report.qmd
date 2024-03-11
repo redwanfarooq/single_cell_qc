@@ -157,7 +157,7 @@ table = pn.widgets.Tabulator(
         },
     },
     formatters={
-        x: {"type": "progress", "max": 100, "legend": True}
+        x: {"type": "progress", "max": 100, "legend": True, "color": "#E5ECF6"}
         for x in cols
         if re.match(pattern="^\\%", string=str(x))
     },
@@ -180,7 +180,7 @@ bar_type = (
     )
     .update_layout(
         width=780,
-        height=50 + 50 * len(df_barcode_metrics["Sample"].unique()),
+        height=50 + 30 * len(df_barcode_metrics["Sample"].unique()),
         legend_title_text="",
     )
     .update_xaxes(
@@ -230,7 +230,6 @@ Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least
         + "\n:::"
     )
 
-
     cols = ["Sample"] + list(df_sequencing_depth.columns[[_ not in {"Sample", "Cells Recovered"} for _ in df_sequencing_depth.columns]])
 
     table = pn.widgets.Tabulator(
@@ -243,7 +242,7 @@ Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least
             },
         },
         formatters={
-            x: {"type": "progress", "max": target_depth[x], "legend": True}
+            x: {"type": "progress", "max": target_depth[x], "legend": True, "color": "#E5ECF6"}
             for x in cols[1:]
         },
         groups={
@@ -292,7 +291,7 @@ Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least
         )
         .update_layout(
             width=780,
-            height=50 + 50 * len(df_sequencing_depth["Sample"].unique()),
+            height=50 + 30 * len(df_sequencing_depth["Sample"].unique()),
             legend_title_text="",
         )
         .update_xaxes(
@@ -334,12 +333,16 @@ density function per hashtag (measure of signal-to-noise ratio; ideal >0.99, acc
 if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     df_signal_strength = [
         pd.read_csv(files[1], sep="\t", header=0, index_col=None)
-        .apply(lambda x: pd.to_numeric(x, downcast="float", errors="coerce"))
+        .apply(lambda x: pd.to_numeric(x, downcast="integer", errors="coerce"))
         .apply(lambda x: round(1 - x, ndigits=3))
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
     ]
-    df_signal_strength = reduce(lambda x, y: pd.merge(x, y, how="outer"), df_signal_strength)
+    df_signal_strength = (
+        reduce(lambda x, y: pd.merge(x, y, how="outer"), df_signal_strength)
+        .sort_values(by="Sample")
+        .reset_index(drop=True)
+    )
 
     df_assignment = [
         pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["Barcode", "Sample"]]
@@ -349,7 +352,13 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
     ]
-    df_assignment = reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment).convert_dtypes()
+    df_assignment = (
+        reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment)
+        .convert_dtypes()
+        .fillna(0)
+        .sort_values(by="Sample")
+        .reset_index(drop=True)
+    )
 
     cols = ["Sample"] + list(
         df_signal_strength.columns[df_signal_strength.columns != "Sample"]
@@ -365,7 +374,8 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
             },
         },
         formatters={
-            x: {"type": "progress", "max": 1, "legend": True} for x in cols[1:]
+            x: {"type": "progress", "min": 0.5, "max": 1, "legend": True, "color": "#E5ECF6"}
+            for x in cols[1:]
         },
         groups={
             "Signal Strength": [x for x in cols[1:]],
@@ -380,20 +390,28 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         theme="bootstrap",
     )
 
+    df_signal_strength[cols].to_csv("summary_data/hash_signal_strength.tsv", sep="\t", index=False)
+
+    df_signal_strength = (
+        pd.melt(df_signal_strength, id_vars="Sample", value_vars=cols[1:], var_name="HTO", value_name="Signal Strength")
+        .assign(Status=lambda x: ["pass" if _ > 0.9 else "borderline" if _ > 0.8 else "fail" for _ in x["Signal Strength"]])
+    )
+
     fig_hto_signal = (
-        px.violin(
+        px.strip(
             df_signal_strength,
-            x=cols[1:],
-            color="variable",
-            color_discrete_sequence=px.colors.qualitative.D3,
-            points="all",
-            orientation="h",
-            range_x=[0.8, 1],
-            category_orders={"variable": sorted(cols[1:])},
+            x="Signal Strength",
+            y="HTO",
+            hover_data="Sample",
+            color="Status",
+            color_discrete_sequence=list(COLOURS.values()),
+            stripmode="overlay",
+            range_x=[0.5, 1],
+            category_orders={"HTO": sorted(df_signal_strength["HTO"].unique())},
         )
         .update_layout(
             width=780,
-            height=50 + 100 * len(cols[1:]),
+            height=50 + 30 * len(cols[1:]),
             legend_title_text="",
         )
         .update_xaxes(
@@ -403,13 +421,11 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
             title="",
         )
         .update_traces(
-            side="positive",
-            width=4,
+            jitter=0,
+            marker={"symbol": "line-ns-open"},
         )
     )
     fig_hto_signal = pn.pane.Plotly(fig_hto_signal)
-
-    df_signal_strength[cols].to_csv("summary_data/hash_signal_strength.tsv", sep="\t", index=False)
 
     cols = ["Sample"] + list(df_assignment.columns[df_assignment.columns != "Sample"])
 
@@ -422,7 +438,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         )
         .update_layout(
             width=780,
-            height=50 + 50 * len(df_assignment["Sample"].unique()),
+            height=50 + 30 * len(df_assignment["Sample"].unique()),
             legend_title_text="",
         )
         .update_xaxes(
@@ -539,6 +555,9 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     )
 
 df_qc_filters = pd.concat(df_qc_filters, axis=0, ignore_index=True)
+df_qc_filters.iloc[:, :-1] = df_qc_filters.iloc[:, :-1].apply(
+    lambda x: ["Pass" if _ else "Fail" for _ in x]
+)
 
 table = pn.widgets.Tabulator(
     df_qc_metrics[cols],
@@ -550,7 +569,7 @@ table = pn.widgets.Tabulator(
         },
     },
     formatters={
-        x: {"type": "progress", "max": 100, "legend": True}
+        x: {"type": "progress", "max": 100, "legend": True, "color": "#E5ECF6"}
         for x in cols
         if re.match(pattern="^\\%", string=str(x))
     },
@@ -586,42 +605,40 @@ for index, sample in enumerate(samples):
     fig_filters = fig_filters.add_trace(
         go.Parcats(
             dimensions=dims,
+            hoveron="dimension",
             line={
-                "color": df["All"].astype("int"),
-                "colorscale": [[0, COLOURS["fail"]], [1, COLOURS["pass"]]],
+                "color": pd.factorize(df["All"])[0],
+                "colorscale": [(0, COLOURS["fail"]), (1, COLOURS["pass"])],
                 "shape": "hspline",
             },
-            hoveron="color",
-            hoverinfo="count+probability",
             arrangement="freeform",
-            tickfont={"size": 1},
             visible=not bool(index),
-        ),
+        )
     )
 fig_filters = fig_filters.update_layout(
-    width=780,
-    height=400,
-    updatemenus=[
-        go.layout.Updatemenu(
-            active=0,
-            buttons=[
-                {
-                    "label": sample,
-                    "method": "update",
-                    "args": [
-                        {
-                            "visible": [
-                                True if index == count else False
-                                for count in np.arange(len(samples))
-                            ]
-                        }
-                    ],
-                }
-                for index, sample in enumerate(samples)
-            ],
-            type="buttons",
-        )
-    ],
+        width=780,
+        height=300,
+        updatemenus=[
+            go.layout.Updatemenu(
+                active=0,
+                buttons=[
+                    {
+                        "label": sample,
+                        "method": "update",
+                        "args": [
+                            {
+                                "visible": [
+                                    True if index == count else False
+                                    for count in np.arange(len(samples))
+                                ]
+                            }
+                        ],
+                    }
+                    for index, sample in enumerate(samples)
+                ],
+                type="buttons",
+            )
+        ],
 )
 fig_filters = pn.pane.Plotly(fig_filters)
 
