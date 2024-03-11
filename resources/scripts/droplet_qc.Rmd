@@ -3,8 +3,7 @@ title: Droplet processing QC report
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
-    theme: flatly
-    highlight: haddock
+    theme: cosmo
     toc: true
     toc_depth: 2
     toc_float: true
@@ -69,7 +68,7 @@ if (exists("snakemake")) {
   log <- file(snakemake@log[[1]], open = "w")
   sink(log, type = "message") # write stderr to Snakemake log file
 
-  snakemake@source("functions.R")
+  snakemake@source("utils.R")
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
@@ -79,7 +78,7 @@ if (exists("snakemake")) {
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
 } else {
   # if running in isolation
-  source("functions.R")
+  source("utils.R")
 }
 
 # Replace path placeholders and validate params
@@ -191,7 +190,12 @@ bc$hto <- colnames(hto.mat)
 # Data processing
 
 ```{r no-cell-calling, eval=params$pre_filtered}
+cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
+  unlist() %>%
+  sum() %>%
+  ifelse(. > 0, ., NA)
 bc.cells <- Reduce(intersect, bc)
+cc.stats <- list("loaded" = cells.loaded, "cells" = length(bc.cells))
 gex.mat <- gex.mat[, bc.cells]
 ```
 
@@ -214,12 +218,14 @@ total.counts <- lapply(
 
 cells <- list()
 empty <- list()
-cc.stats <- list("cells" = 0, "empty" = 0, "limited" = NA)
+cc.stats <- list("loaded" = NA, "cells" = 0, "empty" = 0, "limited" = NA)
 
 cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
   unlist() %>%
-  sum()
-if (cells.loaded > 0) {
+  sum() %>%
+  ifelse(. > 0, ., NA)
+cc.stats$loaded <- cells.loaded
+if (!is.na(cells.loaded)) {
   expected.cells <- cells.loaded * 0.625 # ~62.5% capture rate of cells loaded as per 10x documentation
 } else {
   expected.cells <- estimate.expected.cells(colSums(gex.mat)) # if cells loaded not available, emprically estimate expected cells using GEX UMI counts
@@ -347,6 +353,7 @@ demux.stats <- demux.res %>%
 demux.stats <- demux.stats$count %>%
   as.list() %>%
   setNames(demux.stats$Sample)
+demux.stats$singlet <- sum(demux.res$Type == "singlet")
 bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
   rownames()
@@ -355,7 +362,7 @@ gex.mat <- gex.mat[, bc.cells]
 
 ```{r hto-demultiplexing-classification, eval=!is.null(params$hto_matrix)}
 cat("### Classification", "\n\n")
-cat(sprintf("* **%s:** %s", names(demux.stats), format(demux.stats, big.mark = ",")) %>% paste(collapse = "\n"), "\n")
+cat(sprintf("* **%s:** %s", names(demux.stats)[names(demux.stats) != "singlet"], format(as.integer(demux.stats[names(demux.stats) != "singlet"]), big.mark = ",")) %>% paste(collapse = "\n"), "\n")
 cat("\n\n")
 ggplotly(
   bar.plot(
@@ -454,8 +461,9 @@ if (any(known)) {
 multiplet.stats <- list(
   known = sum(multiplet.res$known, na.rm = TRUE),
   predicted = sum(multiplet.res$predicted, na.rm = TRUE),
-  singlets = sum(!multiplet.res$known & !multiplet.res$predicted, na.rm = TRUE)
+  singlet = sum(!multiplet.res$known & !multiplet.res$predicted, na.rm = TRUE)
 )
+multiplet.stats$multiplet <- sum(multiplet.stats$known, multiplet.stats$predicted, na.rm = TRUE)
 bc.cells <- multiplet.res %>%
   filter(!known & !predicted) %>%
   rownames()
@@ -463,7 +471,7 @@ bc.cells <- multiplet.res %>%
 
 ```{r multiplet-calling-classification, eval=params$multiplet_calling}
 cat("### Classification", "\n\n")
-cat("* **Singlets:**", multiplet.stats$singlets %>% format(big.mark = ","), "\n")
+cat("* **Singlets:**", multiplet.stats$singlet %>% format(big.mark = ","), "\n")
 cat("* **Known (inter-sample) multiplets:**", multiplet.stats$known %>% format(big.mark = ","), "\n")
 cat("* **Predicted (intra-sample) multiplets:**", multiplet.stats$predicted %>% format(big.mark = ","), "\n")
 cat("\n\n")
@@ -480,7 +488,7 @@ ggplotly(
 )
 ```
 
-# Output
+# Summary
 
 ```{r output}
 metadata <- data.frame(
@@ -493,18 +501,70 @@ if (exists("demux.res")) {
 } else {
   metadata$Sample <- md[[1]]$sample
 }
+
+summary.stats <- cc.stats[c("loaded", "cells")] %>%
+  as.data.frame() %>%
+  dplyr::rename(
+    cells_loaded = loaded,
+    cells_recovered = cells
+  )
+if (exists("demux.stats")) {
+  summary.stats <- cbind(
+    summary.stats,
+    demux.stats[c("singlet", "multiplet", "negative", "uncertain")]
+  )
+}
+if (exists("multiplet.stats")) {
+  summary.stats$singlet <- multiplet.stats$singlet
+  summary.stats$multiplet <- multiplet.stats$multiplet
+}
+summary.stats <- summary.stats %>%
+  mutate(
+    undetermined = if_else(exists("negative") && exists("uncertain"), negative + uncertain, 0)
+  ) %>%
+  select(
+    cells_loaded,
+    cells_recovered,
+    singlet,
+    multiplet,
+    undetermined
+  ) %>%
+  mutate(
+    across(
+      .cols = !starts_with("cells_"),
+      .fns = function(x) x / cells_recovered,
+      .names = "fraction_{.col}"
+    )
+  )
+
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write(
   metadata,
   file = file.path(params$outdir, "metadata.tsv"),
   delim = "\t"
 )
+vroom::vroom_write(
+  summary.stats,
+  file = file.path(params$outdir, "barcode_stats.tsv"),
+  delim = "\t"
+)
+if (exists("dmm")) {
+  vroom::vroom_write(
+    dmmOverlap(dmm)[wl] %>%
+      as.matrix() %>%
+      t() %>%
+      as.data.frame(),
+    file = file.path(params$outdir, "hto_signal.tsv"),
+    delim = "\t"
+  )
+}
 if (exists("bc.empty")) {
   vroom::vroom_write_lines(
     bc.empty,
     file = file.path(params$outdir, "empty_droplet_barcodes.txt")
   )
 }
+
 cc.excluded <- if (exists("cc.stats")) cc.stats$empty else NA
 demux.excluded <- if (exists("demux.stats")) sum(demux.stats$negative, demux.stats$uncertain, na.rm = TRUE) else NA
 multiplet.excluded <- if (exists("multiplet.stats")) sum(multiplet.stats$known, multiplet.stats$predicted, na.rm = TRUE) else NA
@@ -513,8 +573,6 @@ cat("* **Total barcodes excluded:**", sum(cc.excluded, demux.excluded, multiplet
 if (!is.na(cc.excluded)) cat("  + **Empty droplets:**", cc.excluded %>% format(big.mark = ","), "\n")
 if (!is.na(demux.excluded)) cat("  + **Negative/uncertain HTO:**", demux.excluded %>% format(big.mark = ","), "\n")
 if (!is.na(multiplet.excluded)) cat("  + **Multiplets:**", multiplet.excluded %>% format(big.mark = ","), "\n")
-cat("\n\n")
-metadata
 ```
 
 # Session Info

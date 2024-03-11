@@ -3,8 +3,7 @@ title: Ambient removal report
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
-    theme: flatly
-    highlight: haddock
+    theme: cosmo
     toc: true
     toc_depth: 2
     toc_float: true
@@ -48,7 +47,7 @@ if (exists("snakemake")) {
   log <- file(snakemake@log[[1]], open = "w")
   sink(log, type = "message") # write stderr to Snakemake log file
 
-  snakemake@source("functions.R")
+  snakemake@source("utils.R")
 
   unlockBinding("params", .GlobalEnv)
   params$sample_id <- snakemake@wildcards$sample
@@ -58,7 +57,7 @@ if (exists("snakemake")) {
   if (!dir.exists(dirname(snakemake@output[[1]]))) dir.create(dirname(snakemake@output[[1]]), recursive = TRUE)
 } else {
   # if running in isolation
-  source("functions.R")
+  source("utils.R")
 }
 
 # Replace path placeholders
@@ -389,8 +388,6 @@ cat("* **Graph nearest neighbours (k):**", params$adt_ambient_removal$cluster_k,
 cat("* **Cluster resolution:**", params$adt_ambient_removal$cluster_res, "\n")
 ```
 
-# Output
-
 ```{r output}
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 if (identical(counts$filtered, counts$decontaminated)) counts$decontaminated <- NULL # remove decontaminated matrices if all modalities skipped
@@ -405,8 +402,6 @@ for (type in names(counts)) {
     overwrite = TRUE
   )
 }
-
-cat("* **Output path:**", params$outdir, "\n")
 ```
 
 # Session Info
