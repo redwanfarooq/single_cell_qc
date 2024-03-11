@@ -12,3 +12,4 @@ qc:
   - droplet_qc
   - libraries_qc
   - ambient_removal
+  - summary

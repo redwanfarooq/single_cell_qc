@@ -33,12 +33,12 @@ gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
 atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
+# File path to TSV file containing total sequencing read counts per library type/sample
+# MUST contain column 'sample' and 1 column per library type
+read_counts: /path/to/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
-# If 'rmd_dir' not specified, defaults to
-# 'resources/rmarkdown'
-# rmd_dir:
 # If 'metadata_dir' not specified, defaults to
 # 'metadata'
 # metadata_dir:
@@ -98,7 +98,7 @@ atac_filters:
 adt_filters:
   isotype_control: null # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
-control: null #default: null; control sample (i.e. cross-batch technical replicate)
+control: null # default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   skip: true # default: false
   integrate_samples: false # default: false
@@ -113,3 +113,9 @@ adt_ambient_removal:
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
   cluster_markers: null # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+# summary_report.qmd
+target_depth:
+  GEX: 20000 # default: 20000
+  ATAC: 25000 # default: 25000
+  ADT: 5000 # default: 5000
+  HTO: 2000 # default: 2000

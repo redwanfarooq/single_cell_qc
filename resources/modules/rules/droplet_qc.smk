@@ -4,7 +4,7 @@
 # Requires functions from resources/scripts/rule.py
 ##########################################################################################
 
-rmd_dir = config.get("rmd_dir", "resources/rmarkdown")
+scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
 rule droplet_qc:
@@ -12,7 +12,7 @@ rule droplet_qc:
     log: os.path.abspath("logs/droplet_qc/{sample}.log")
     threads: 1
     params:
-        path = rmd_dir if os.path.isabs(rmd_dir) else os.path.join(workflow.basedir, rmd_dir),
+        script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
         metadata = lambda wildcards: get_hto_metadata(wildcards, info=info),
         gex_matrix = lambda wildcards: config["gex_matrix"],
         atac_matrix = lambda wildcards: config.get("atac_matrix", None),
@@ -37,8 +37,8 @@ rule droplet_qc:
         scdblfinder_dbr_sd = config.get("scdblfinder_dbr_sd", None),
         multiplet_projection = config.get("multiplet_projection", None)
     conda: "single_cell_qc"
-    envmodules: "R-cbrg"
+    # envmodules: "R-cbrg"
     message: "Running droplet processing QC for {wildcards.sample}"
-    script: "{params.path}/droplet_qc.Rmd"
+    script: "{params.script_path}/droplet_qc.Rmd"
 
 droplet_qc = expand("{path}/droplet_qc/{sample}.html", path=[config["output_dir"]["reports"]], sample=samples)
