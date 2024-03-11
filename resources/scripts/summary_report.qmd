@@ -355,7 +355,6 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     df_assignment = (
         reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment)
         .convert_dtypes()
-        .fillna(0)
         .sort_values(by="Sample")
         .reset_index(drop=True)
     )
@@ -392,10 +391,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
 
     df_signal_strength[cols].to_csv("summary_data/hash_signal_strength.tsv", sep="\t", index=False)
 
-    df_signal_strength = (
-        pd.melt(df_signal_strength, id_vars="Sample", value_vars=cols[1:], var_name="HTO", value_name="Signal Strength")
-        .assign(Status=lambda x: ["pass" if _ > 0.9 else "borderline" if _ > 0.8 else "fail" for _ in x["Signal Strength"]])
-    )
+    df_signal_strength = pd.melt(df_signal_strength, id_vars="Sample", value_vars=cols[1:], var_name="HTO", value_name="Signal Strength")
 
     fig_hto_signal = (
         px.strip(
@@ -403,8 +399,8 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
             x="Signal Strength",
             y="HTO",
             hover_data="Sample",
-            color="Status",
-            color_discrete_sequence=list(COLOURS.values()),
+            color="HTO",
+            color_discrete_sequence=px.colors.qualitative.D3,
             stripmode="overlay",
             range_x=[0.5, 1],
             category_orders={"HTO": sorted(df_signal_strength["HTO"].unique())},
@@ -412,7 +408,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         .update_layout(
             width=780,
             height=50 + 30 * len(cols[1:]),
-            legend_title_text="",
+            showlegend=False,
         )
         .update_xaxes(
             title="Signal Strength",
@@ -431,7 +427,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
 
     bar_assignment = (
         px.bar(
-            df_assignment,
+            df_assignment.fillna(0),
             x=cols[1:],
             y="Sample",
             category_orders={"Sample": sorted(df_assignment["Sample"].unique())},
@@ -535,10 +531,15 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         axis=0,
         ignore_index=True,
     )
-    df_assignment = pd.crosstab(
-        index=df_assignment["Sample"],
-        columns=df_assignment["Assignment"],
-    ).reset_index().convert_dtypes()
+    df_assignment = (
+        pd.crosstab(
+            index=df_assignment["Sample"],
+            columns=df_assignment["Assignment"],
+        )
+        .reset_index()
+        .replace({0: pd.NA})
+        .convert_dtypes()
+    )
 
     df_qc_metrics = df_qc_metrics.merge(
         df_assignment,
