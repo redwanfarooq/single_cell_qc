@@ -24,8 +24,8 @@ module: qc
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/cite_seq/cohort_01/qc
+  reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/cite_seq/cohort_01/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
