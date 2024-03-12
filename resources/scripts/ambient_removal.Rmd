@@ -204,7 +204,8 @@ if (params$gex_ambient_removal$skip) {
       FindVariableFeatures() %>%
       ScaleData() %>%
       RunPCA() %>%
-      IntegrateLayers(method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+      IntegrateLayers(method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated") %>%
+      JoinLayers(layers = "counts")
     reduction <- "integrated"
   } else {
     seu <- seu %>%
@@ -307,7 +308,8 @@ if (params$adt_ambient_removal$skip) {
       NormalizeData(normalization.method = "CLR", margin = 2) %>%
       ScaleData(features = rownames(seu)) %>%
       RunPCA(features = rownames(seu)) %>%
-      IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated")
+      IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated") %>%
+      JoinLayers(layers = "counts")
     reduction <- "integrated"
   } else {
     seu <- seu %>%
