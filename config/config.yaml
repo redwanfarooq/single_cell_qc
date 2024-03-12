@@ -24,18 +24,18 @@ module: qc
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/mogad_multiome/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/mogad_multiome/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/mogad_multiome/data/processed/cite_seq/cohort_01/qc
+  reports: /project/fuggerlab/rfarooq/project/mogad_multiome/results/reports/cite_seq/cohort_01/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/test/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
-hto_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
+gex_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/cohort_01/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
-adt_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/test/barcounter/{sample}/{sample}_Tag_Counts.csv
+adt_matrix: /project/fuggerlab/shared/mogad_multiome/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /path/to/read_counts.tsv
+read_counts: /project/fuggerlab/shared/mogad_multiome/data/raw/cite_seq/cohort_01/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -101,7 +101,7 @@ adt_filters:
 control: null # default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   skip: false # default: false
-  integrate_samples: false # default: false
+  integrate_samples: true # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
@@ -112,7 +112,7 @@ gex_ambient_removal:
     - GNLY
 adt_ambient_removal:
   skip: false # default: false
-  integrate_samples: false # default: false
+  integrate_samples: true # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
@@ -127,5 +127,5 @@ adt_ambient_removal:
 target_depth:
   GEX: 20000 # default: 20000
   ATAC: 25000 # default: 25000
-  ADT: 5000 # default: 5000
+  ADT: 10000 # default: 5000
   HTO: 2000 # default: 2000
