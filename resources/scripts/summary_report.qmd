@@ -25,7 +25,6 @@ target_depth = "KEY:VALUE"
 
 ```{python}
 import os
-import glob
 import re
 import session_info
 import numpy as np
@@ -81,9 +80,7 @@ files = {k: {sample: [] for sample in samples} for k in PATHS.keys()}
 for k in files.keys():
     for sample in files[k].keys():
         for _ in PATHS[k]:
-            files[k][sample] += glob.glob(
-                os.path.join(input_dir, _.format(sample=sample)), recursive=True
-            )
+            files[k][sample].append(os.path.join(input_dir, _.format(sample=sample)))
 target_depth = {_.split(":")[0]: int(_.split(":")[1]) for _ in target_depth.split(",")}
 ```
 
@@ -235,10 +232,10 @@ if read_counts:
         lambda x: [int(y) for y in x / df_sequencing_depth["Cells Recovered"]]
     )
 
-metrics = {
-    x: f"{target_depth[x]} reads/cell"
-    for x in df_sequencing_depth.iloc[:, 1:-1].columns
-}
+    metrics = {
+        x: f"{target_depth[x]} reads/cell"
+        for x in df_sequencing_depth.iloc[:, 1:-1].columns
+    }
 
     Markdown(
 """
