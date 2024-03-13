@@ -24,8 +24,8 @@ module: qc
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/qc/gex_atac
-  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/qc/gex_atac
+  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/gex_atac/qc
+  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/gex_atac/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
@@ -35,7 +35,7 @@ atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_ata
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /path/to/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
