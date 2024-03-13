@@ -509,26 +509,17 @@ summary.stats <- cc.stats[c("loaded", "cells")] %>%
     cells_recovered = cells
   )
 if (exists("demux.stats")) {
-  summary.stats <- cbind(
-    summary.stats,
-    demux.stats[c("singlet", "multiplet", "negative", "uncertain")]
-  )
+  summary.stats <- summary.stats %>%
+    cbind(demux.stats[c("singlet", "multiplet", "negative", "uncertain")]) %>%
+    mutate(
+      undetermined = negative + uncertain
+    )
 }
 if (exists("multiplet.stats")) {
   summary.stats$singlet <- multiplet.stats$singlet
   summary.stats$multiplet <- multiplet.stats$multiplet
 }
-summary.stats <- summary.stats %>%
-  mutate(
-    undetermined = if_else(exists("negative") && exists("uncertain"), negative + uncertain, 0)
-  ) %>%
-  select(
-    cells_loaded,
-    cells_recovered,
-    singlet,
-    multiplet,
-    undetermined
-  ) %>%
+summary.stats <- summary.stats[, match(c("cells_loaded", "cells_recovered", "singlet", "multiplet", "undetermined"), colnames(summary.stats), nomatch = 0), drop = FALSE] %>%
   mutate(
     across(
       .cols = !starts_with("cells_"),
