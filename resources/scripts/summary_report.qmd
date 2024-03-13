@@ -108,6 +108,10 @@ Summary statistics for single cell QC pipeline
 `{python} Markdown(f"<pre>{input_dir}</pre>")`
 :::
 
+# GEM metrics
+
+Summary statistics for gel bead-in-emulsion (GEM)-level QC per 10x Chromium well.
+
 ```{python}
 df_barcode_metrics = [
     pd.read_csv(files[0], sep="\t", header=0, index_col=None)
@@ -132,13 +136,7 @@ metrics = {
 }
 
 Markdown(
-"""
-# GEM metrics
-
-Summary statistics for gel bead-in-emulsion (GEM)-level QC per 10x Chromium well.
-
-"""
-    + "::: {.callout-tip title='Metrics'}\n"
+    "::: {.callout-tip title='Metrics'}\n"
     + "\n".join(
         [
             f"**{k}** {v}  "
@@ -221,6 +219,17 @@ df_barcode_metrics[cols].to_csv("summary_data/gem_metrics.tsv", sep="\t", index=
 
 ```{python}
 if read_counts:
+    Markdown(
+"""
+# Sequencing depth
+
+Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least 1 cell.
+"""
+    )
+```
+
+```{python}
+if read_counts:
     df_sequencing_depth = (
         pd.read_csv(read_counts, sep="\t", header=0, index_col=None)
         .rename(
@@ -238,13 +247,7 @@ if read_counts:
     }
 
     Markdown(
-"""
-# Sequencing depth
-
-Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least 1 cell.
-
-::: {.callout-tip title='Minimum Requirements'}
-"""
+        "::: {.callout-tip title='Minimum Requirements'}\n"
         + "\n".join(
             [
                 f"**{k}** {v}  "
@@ -336,6 +339,16 @@ Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least
     df_sequencing_depth[cols].to_csv("summary_data/sequencing_depth.tsv", sep="\t", index=False)
 ```
 
+```{python}
+if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
+    Markdown(
+"""
+# Demultiplexing metrics
+
+Summary statistics for demultiplexing hashed samples per 10x Chromium Well.
+"""
+    )
+```
 
 ```{python}
 if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
@@ -372,13 +385,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     }
 
     Markdown(
-"""
-# Demultiplexing metrics
-
-Summary statistics for demultiplexing hashed samples per 10x Chromium Well.
-
-::: {.callout-tip title='Metrics'}
-"""
+        "::: {.callout-tip title='Metrics'}\n"
         + "\n".join(
             [
                 f"**{k}** {v}  "
@@ -487,6 +494,10 @@ Summary statistics for demultiplexing hashed samples per 10x Chromium Well.
     df_assignment[cols].to_csv("summary_data/hash_assignment.tsv", sep="\t", index=False)
 ```
 
+# Cell metrics
+
+Summary statistics for cell-level QC for each library type per 10x Chromium well.
+
 ```{python}
 df_qc_filters = [
     pd.read_csv(files[0], sep="\t", header=0, index_col=0).assign(Sample=sample)
@@ -576,21 +587,15 @@ df_qc_filters.iloc[:, :-1] = df_qc_filters.iloc[:, :-1].apply(
 )
 
 Markdown(
-"""
-# Cell metrics
-
-Summary statistics for cell-level QC for each library type per 10x Chromium well.
-
-::: {.callout-tip title='Metrics'}
-"""
-        + "\n".join(
-            [
-                f"**{k}** {v}  "
-                for k, v in metrics.items()
-            ]
-        )
-        + "\n:::"
+    "::: {.callout-tip title='Metrics'}\n"
+    + "\n".join(
+        [
+            f"**{k}** {v}  "
+            for k, v in metrics.items()
+        ]
     )
+    + "\n:::"
+)
 
 table = pn.widgets.Tabulator(
     df_qc_metrics[cols],
