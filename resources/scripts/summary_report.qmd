@@ -111,18 +111,6 @@ Summary statistics for single cell QC pipeline
 `{python} Markdown(f"<pre>{input_dir}</pre>")`
 :::
 
-# GEM metrics
-
-Summary statistics for gel bead-in-emulsion (GEM)-level QC per 10x Chromium well.
-
-::: {.callout-tip title="Metrics"}
-**Cells Loaded** estimated number of cells loaded  
-**Cells Recovered** total number of GEM barcodes containing at least 1 cell  
-**% Singlet** fraction of cell-containing GEM barcodes containing only 1 cell  
-**% Multiplet** fraction of cell-containing GEM barcodes containing more than 1 cell  
-**% Undetermined** fraction of cell-containing GEM barcodes of undetermined type
-:::
-
 ```{python}
 df_barcode_metrics = [
     pd.read_csv(files[0], sep="\t", header=0, index_col=None)
@@ -138,13 +126,40 @@ df_barcode_metrics.loc[:, fraction_cols] = df_barcode_metrics.loc[
     :, fraction_cols
 ].apply(lambda x: round(x * 100, ndigits=1))
 
+metrics = {
+    "Cells Loaded": "estimated number of cells loaded",
+    "Cells Recovered": "total number of GEM barcodes containing at least 1 cell",
+    "% Singlet": "fraction of cell-containing GEM barcodes containing only 1 cell",
+    "% Multiplet": "fraction of cell-containing GEM barcodes containing more than 1 cell",
+    "% Undetermined": "fraction of cell-containing GEM barcodes of undetermined type",
+}
+
+Markdown(
+"""
+# GEM metrics
+
+Summary statistics for gel bead-in-emulsion (GEM)-level QC per 10x Chromium well.
+
+"""
+    + "::: {.callout-tip title='Metrics'}\n"
+    + "\n".join(
+        [
+            f"**{k}** {v}  "
+            for k, v in metrics.items()
+            if k in df_barcode_metrics.columns
+        ]
+    )
+    + "\n:::"
+)
+
 cols = [
     "Sample",
     "Cells Loaded",
     "Cells Recovered",
-    "% Singlet",
-    "% Multiplet",
-    "% Undetermined",
+] + [
+    _
+    for _ in {"% Singlet", "% Multiplet", "% Undetermined"}
+    if _ in df_barcode_metrics.columns
 ]
 
 table = pn.widgets.Tabulator(
@@ -171,31 +186,38 @@ table = pn.widgets.Tabulator(
     theme="bootstrap",
 )
 
-bar_type = (
-    px.bar(
-        df_barcode_metrics,
-        x=["singlet", "multiplet", "undetermined"],
-        y="Sample",
-        category_orders={"Sample": sorted(df_barcode_metrics["Sample"].unique())},
+if any([_ in {"singlet", "multiplet", "undetermined"} for _ in df_barcode_metrics.columns]):
+    bar_type = (
+        px.bar(
+            df_barcode_metrics,
+            x=[
+                _
+                for _ in df_barcode_metrics.columns
+                if _ in {"singlet", "multiplet", "undetermined"}
+            ],
+            y="Sample",
+            category_orders={"Sample": sorted(df_barcode_metrics["Sample"].unique())},
+        )
+        .update_layout(
+            width=780,
+            height=50 + 30 * len(df_barcode_metrics["Sample"].unique()),
+            legend_title_text="",
+        )
+        .update_xaxes(
+            title="Barcodes",
+        )
+        .update_yaxes(
+            title="",
+        )
+        .update_traces(
+            marker_line_width=0,
+        )
     )
-    .update_layout(
-        width=780,
-        height=50 + 30 * len(df_barcode_metrics["Sample"].unique()),
-        legend_title_text="",
-    )
-    .update_xaxes(
-        title="Barcodes",
-    )
-    .update_yaxes(
-        title="",
-    )
-    .update_traces(
-        marker_line_width=0,
-    )
-)
-bar_type = pn.pane.Plotly(bar_type)
+    bar_type = pn.pane.Plotly(bar_type)
 
-pn.Tabs(("Summary", table), ("Barcode Type", bar_type)).servable()
+    pn.Tabs(("Summary", table), ("Barcode Type", bar_type)).servable()
+else:
+    pn.Tabs(("Summary", table)).servable()
 
 df_barcode_metrics[cols].to_csv("summary_data/gem_metrics.tsv", sep="\t", index=False)
 ```
@@ -213,18 +235,23 @@ if read_counts:
         lambda x: [int(y) for y in x / df_sequencing_depth["Cells Recovered"]]
     )
 
+metrics = {
+    x: f"{target_depth[x]} reads/cell"
+    for x in df_sequencing_depth.iloc[:, 1:-1].columns
+}
+
     Markdown(
 """
 # Sequencing depth
 
 Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least 1 cell.
 
+::: {.callout-tip title='Minimum Requirements'}
 """
-        + "::: {.callout-tip title='Minimum Requirements'}\n"
         + "\n".join(
             [
-                f"**{lib_type}** {f'{target_depth[lib_type]:,}'} reads/cell  "
-                for lib_type in df_sequencing_depth.iloc[:, 1:-1].columns
+                f"**{k}** {v}  "
+                for k, v in metrics.items()
             ]
         )
         + "\n:::"
@@ -312,22 +339,6 @@ Mean sequencing reads per gel bead-in-emulsion (GEM) barcode containing at least
     df_sequencing_depth[cols].to_csv("summary_data/sequencing_depth.tsv", sep="\t", index=False)
 ```
 
-```{python}
-if (all(os.path.isfile(files[1]) for sample, files in files["droplet_qc"].items())):
-    Markdown(
-        """
-# Demultiplexing metrics
-
-Summary statistics for demultiplexing hashed samples per 10x Chromium Well.
-
-::: {.callout-tip title="Metrics"} 
-**Signal Strength** fraction non-overlap between fitted 'signal' and 'background' probability
-density function per hashtag (measure of signal-to-noise ratio; ideal >0.99, acceptable >0.9)
-:::
-"""
-    )
-```
-
 
 ```{python}
 if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
@@ -357,6 +368,27 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         .convert_dtypes()
         .sort_values(by="Sample")
         .reset_index(drop=True)
+    )
+
+    metrics = {
+        "Signal Strength": "fraction non-overlap between fitted 'signal' and 'background' probability density function per hashtag (measure of signal-to-noise ratio; ideal >0.99, acceptable >0.9)",
+    }
+
+    Markdown(
+"""
+# Demultiplexing metrics
+
+Summary statistics for demultiplexing hashed samples per 10x Chromium Well.
+
+::: {.callout-tip title='Metrics'}
+"""
+        + "\n".join(
+            [
+                f"**{k}** {v}  "
+                for k, v in metrics.items()
+            ]
+        )
+        + "\n:::"
     )
 
     cols = ["Sample"] + list(
@@ -459,27 +491,6 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
 ```
 
 ```{python}
-metrics = [
-    "**Cells Passed** total number of cell barcodes passing all library-level QC filters  ",
-    "**% Excluded** fraction of cell barcodes excluded for failing 1 or more library-level QC filters  ",
-]
-if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
-    metrics.append("**Assignment** number of cell barcodes passing all library-level QC filters assigned to each hashed sample")
-
-Markdown(
-"""
-# Cell metrics
-
-Summary statistics for cell-level QC for each library type per 10x Chromium well.
-
-::: {.callout-tip title='Minimum Requirements'}
-"""
-        + "\n".join(metrics)
-        + "\n:::"
-    )
-```
-
-```{python}
 df_qc_filters = [
     pd.read_csv(files[0], sep="\t", header=0, index_col=0).assign(Sample=sample)
     for sample, files in files["libraries_qc"].items()
@@ -502,6 +513,11 @@ fraction_cols = df_qc_metrics.filter(regex="^\\%").columns
 df_qc_metrics.loc[:, fraction_cols] = df_qc_metrics.loc[:, fraction_cols].apply(
     lambda x: round(x * 100, ndigits=1)
 )
+
+metrics = {
+    "Cells Passed": "total number of cell barcodes passing all library-level QC filters",
+    "% Excluded": "fraction of cell barcodes excluded for failing 1 or more library-level QC filters",
+}
 
 cols = [
     "Sample",
@@ -546,6 +562,8 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         on="Sample",
     )
 
+    metrics["Assignment"] = "number of cell barcodes passing all library-level QC filters assigned to each hashed sample"
+
     cols += list(
         df_assignment.columns[
             [
@@ -559,6 +577,23 @@ df_qc_filters = pd.concat(df_qc_filters, axis=0, ignore_index=True)
 df_qc_filters.iloc[:, :-1] = df_qc_filters.iloc[:, :-1].apply(
     lambda x: ["Pass" if _ else "Fail" for _ in x]
 )
+
+Markdown(
+"""
+# Cell metrics
+
+Summary statistics for cell-level QC for each library type per 10x Chromium well.
+
+::: {.callout-tip title='Metrics'}
+"""
+        + "\n".join(
+            [
+                f"**{k}** {v}  "
+                for k, v in metrics.items()
+            ]
+        )
+        + "\n:::"
+    )
 
 table = pn.widgets.Tabulator(
     df_qc_metrics[cols],
