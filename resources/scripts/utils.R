@@ -3,7 +3,8 @@
 # ==============================
 
 
-`%>%` <- magrittr::`%>%` # explicitly define pipe operator
+library(magrittr)
+library(Matrix)
 
 
 #' Modified implementation of CellRanger OrdMag algorithm
@@ -186,7 +187,7 @@ get.10x.features <- function(file, type = NULL) {
 #' @param add.suffix Logical scalar (default `FALSE`). Add '-1' suffix to match
 #'  cell barcodes from Cell Ranger.
 #'
-#' @returns A matrix of counts with features as row names and cell barcodes
+#' @returns A sparse matrix of counts with features as row names and cell barcodes
 #'  as column names.
 #'
 #' @export
@@ -199,8 +200,8 @@ get.barcounter.matrix <- function(file,
 
   matrix <- vroom::vroom(file, delim = ",", col_names = TRUE, show_col_types = FALSE) %>%
     tibble::column_to_rownames("cell_barcode") %>%
-    as.matrix() %>%
-    t()
+    t() %>%
+    as("dgCMatrix")
   if (add.suffix) colnames(matrix) <- paste(colnames(matrix), "1", sep = "-")
   if (!include.total) matrix <- matrix[-1, ]
   if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
