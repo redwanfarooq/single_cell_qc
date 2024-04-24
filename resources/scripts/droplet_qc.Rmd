@@ -55,6 +55,7 @@ knitr::opts_chunk$set(
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(Matrix)
 library(DropletUtils)
 library(demuxmix)
 library(scuttle)
@@ -381,7 +382,7 @@ ggplotly(
 ```{r hto-demultiplexing-raw-counts, eval=!is.null(params$hto_matrix), fig.width=7, fig.height=length(wl)}
 cat("### Raw HTO counts", "\n\n")
 logcounts.plot(
-  as.matrix(hto.mat),
+  hto.mat,
   scale = 0.95,
   colour = NA,
   fill = "#595959",
@@ -392,7 +393,7 @@ logcounts.plot(
 ```{r hto-demultiplexing-demux-counts, eval=!is.null(params$hto_matrix), fig.width=7, fig.height=3*ceiling(length(wl)/2)}
 cat("### Demultiplexed HTO counts", "\n\n")
 logcounts.plot(
-  as.matrix(hto.mat),
+  hto.mat,
   samples = demux.res$Sample,
   scale = 0.95,
   colour = NA,

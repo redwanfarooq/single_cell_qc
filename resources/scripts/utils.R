@@ -3,8 +3,78 @@
 # ==============================
 
 
-library(magrittr)
-library(Matrix)
+# Explicitly define pipe operator
+`%>%` <- magrittr::`%>%`
+
+
+# C++ function for efficiently reading BarCounter CSV file to sparse matrix
+Rcpp::sourceCpp(
+  code = r"(
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <Rcpp.h>
+
+using namespace std;
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+List read_barcounter_csv(string file) {
+  // read header line and extract feature names
+  ifstream infile(file);
+  string line;
+  getline(infile, line);
+  istringstream iss(line);
+  string feature;
+  vector<string> features;
+  while(getline(iss, feature, ',')) {
+    features.emplace_back(feature);
+  }
+  features.erase(features.begin()); // remove barcode column header
+
+  // initialise vectors to store barcodes, row indices, values, and column pointers
+  vector<string> barcodes;
+  vector<int> i, x;
+  vector<int> p = {0};
+
+  // read remaining lines and extract barcodes, row indices, values, and column pointers
+  while (getline(infile, line)) {
+    // extract barcode
+    istringstream iss(line);
+    string barcode;
+    getline(iss, barcode, ',');
+    barcodes.emplace_back(barcode);
+
+    // read values
+    vector<int> y;
+    string val;
+    while(getline(iss, val, ',')) {
+      y.emplace_back(stoi(val));
+    }
+
+    // extract row indices and values for non-zero entries
+    for (size_t j = 0; j < y.size(); ++j) {
+      if (y[j] > 0) {
+        i.emplace_back(j);
+        x.emplace_back(y[j]);
+      }
+    }
+
+    // set next column pointer
+    p.emplace_back(i.size());
+  }
+
+  return List::create(
+    Named("i") = i,
+    Named("p") = p,
+    Named("x") = x,
+    Named("features") = features,
+    Named("barcodes") = barcodes
+  );
+}
+)"
+)
 
 
 #' Modified implementation of CellRanger OrdMag algorithm
@@ -198,18 +268,25 @@ get.barcounter.matrix <- function(file,
                                   add.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
-  matrix <- vroom::vroom(file, delim = ",", col_names = TRUE, show_col_types = FALSE) %>%
-    tibble::column_to_rownames("cell_barcode") %>%
-    t() %>%
-    as("dgCMatrix")
+  # Efficiently read BarCounter CSV file into sparse matrix without loading dense matrix into memory
+  sparse <- read_barcounter_csv(file)
+  matrix <- Matrix::sparseMatrix(
+    i = sparse$i,
+    p = sparse$p,
+    x = sparse$x,
+    dims = c(length(sparse$features), length(sparse$barcodes)),
+    dimnames = list(sparse$features, sparse$barcodes),
+    index1 = FALSE,
+    repr = "C"
+  )
   if (add.suffix) colnames(matrix) <- paste(colnames(matrix), "1", sep = "-")
-  if (!include.total) matrix <- matrix[-1, ]
+  if (!include.total) matrix <- matrix[rownames(matrix) != "total", ]
   if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
   if (any(is.na(colnames(matrix)))) {
     warning(sum(is.na(colnames(matrix))), " barcode(s) in 'cells' not present in count matrix")
     matrix <- matrix[, !is.na(colnames(matrix))]
   }
-  if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, rownames(matrix)), ]
+  if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, x = rownames(matrix)), ]
 
   return(matrix)
 }
@@ -719,6 +796,7 @@ logcounts.plot <- function(matrix,
                            samples = NULL,
                            title = NULL) {
   data <- matrix %>%
+    as.matrix() %>%
     t() %>%
     as.data.frame() %>%
     dplyr::mutate(across(everything(), ~ log10(.x + pseudocount)))
