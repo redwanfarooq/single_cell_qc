@@ -38,6 +38,7 @@ knitr::opts_chunk$set(
 # Load packages
 library(dplyr)
 library(ggplot2)
+library(Matrix)
 library(Seurat)
 library(decontX)
 

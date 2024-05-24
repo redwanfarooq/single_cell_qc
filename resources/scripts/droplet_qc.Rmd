@@ -55,6 +55,7 @@ knitr::opts_chunk$set(
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(Matrix)
 library(DropletUtils)
 library(demuxmix)
 library(scuttle)
