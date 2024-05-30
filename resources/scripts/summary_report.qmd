@@ -32,7 +32,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import panel as pn
-from functools import reduce
 from IPython.display import Markdown
 
 pn.extension("tabulator")
@@ -360,7 +359,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         for sample, files in files["droplet_qc"].items()
     ]
     df_signal_strength = (
-        reduce(lambda x, y: pd.merge(x, y, how="outer"), df_signal_strength)
+        pd.concat(df_signal_strength)
         .sort_values(by="Sample")
         .reset_index(drop=True)
     )
@@ -371,10 +370,11 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
         .agg("count")
         .transpose()
         .assign(Sample=sample)
+        .rename(columns=str)
         for sample, files in files["droplet_qc"].items()
     ]
     df_assignment = (
-        reduce(lambda x, y: pd.merge(x, y, how="outer"), df_assignment)
+        pd.concat(df_assignment)
         .convert_dtypes()
         .sort_values(by="Sample")
         .reset_index(drop=True)
@@ -459,7 +459,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     )
     fig_hto_signal = pn.pane.Plotly(fig_hto_signal)
 
-    cols = ["Sample"] + list(df_assignment.columns[df_assignment.columns != "Sample"])
+    cols = ["Sample"] + list(df_assignment.columns[df_assignment.columns != "Sample"].sort_values())
 
     bar_assignment = (
         px.bar(
@@ -543,6 +543,7 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     df_assignment = [
         pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["Barcode", "Sample"]]
         .set_index("Barcode", inplace=False)
+        .astype(str)
         .rename(columns={"Sample": "Assignment"})
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
@@ -670,7 +671,7 @@ fig_filters = fig_filters.update_layout(
                     }
                     for index, sample in enumerate(samples)
                 ],
-                type="buttons",
+                type="dropdown",
             )
         ],
 )
