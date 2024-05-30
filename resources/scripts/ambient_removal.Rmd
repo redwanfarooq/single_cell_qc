@@ -329,7 +329,7 @@ if (params$adt_ambient_removal$skip) {
     ) %>%
     FindClusters(resolution = params$adt_ambient_removal$cluster_res)
 
-  decont.adt <- decontPro(adt.mat, cell_type = as.integer(Idents(seu), delta_sd = 5e-5, background_sd = 5e-6))
+  decont.adt <- decontPro(adt.mat, cell_type = as.integer(Idents(seu)), delta_sd = 5e-5, background_sd = 5e-6)
   seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 }
 
