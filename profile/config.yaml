@@ -75,8 +75,8 @@ set-resources:
     mem: 32GiB
     runtime: 1h
   ambient_removal:
-    mem: 128GiB
-    runtime: 6h
+    mem: 32GiB
+    runtime: 1h
   summary:
     mem: 1GiB
     runtime: 1h
