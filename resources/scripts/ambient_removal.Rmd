@@ -18,7 +18,6 @@ params:
   gex_matrix: null
   atac_matrix: null
   adt_matrix: null
-  adt_filters: !r list("isotype_control" = NULL)
   control: null
   gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
   adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
@@ -169,11 +168,6 @@ if (params$adt_matrix == params$gex_matrix) {
   adt.mat <- adt.mat[grep(pattern = "^ADT_", rownames(adt.mat)), ]
 } else {
   adt.mat <- get.barcounter.matrix(params$adt_matrix, cells = cells, features.pattern = "^ADT_")
-}
-
-# Remove isotype control antibodies
-if (!is.null(params$adt_filters$isotype_control)) {
-  adt.mat <- adt.mat[grep(pattern = params$adt_filters$isotype_control, rownames(adt.mat), invert = TRUE), ]
 }
 ```
 
