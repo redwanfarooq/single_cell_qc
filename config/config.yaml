@@ -101,7 +101,7 @@ adt_filters:
 control: Control # default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   skip: false # default: false
-  integrate_samples: false # default: false
+  integrate_samples: true # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
