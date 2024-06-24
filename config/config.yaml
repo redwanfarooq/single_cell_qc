@@ -98,7 +98,6 @@ atac_filters:
 adt_filters:
   isotype_control: ^ADT_Isotype_ # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
-control: Control # default: null; control sample (i.e. cross-batch technical replicate)
 gex_ambient_removal:
   skip: false # default: false
   integrate_samples: true # default: false

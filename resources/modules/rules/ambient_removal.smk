@@ -21,7 +21,6 @@ rule ambient_removal:
         gex_matrix = lambda wildcards: config.get("gex_matrix", None),
         atac_matrix = lambda wildcards: config.get("atac_matrix", None),
         adt_matrix = lambda wildcards: config.get("adt_matrix", None),
-        control = config.get("control", None),
         gex_ambient_removal = config.get("gex_ambient_removal", None),
         adt_ambient_removal = config.get("adt_ambient_removal", None)
     conda: "single_cell_qc"
