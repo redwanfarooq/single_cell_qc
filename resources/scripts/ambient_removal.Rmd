@@ -18,7 +18,6 @@ params:
   gex_matrix: null
   atac_matrix: null
   adt_matrix: null
-  control: null
   gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
   adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
 ---
@@ -188,13 +187,7 @@ if (params$gex_ambient_removal$skip) {
   seu[["decontRNA"]] <- seu[["RNA"]]
 } else {
   if (params$gex_ambient_removal$integrate_samples) {
-    if (!is.null(params$control)) {
-      seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
-      split.var <- seu$donor_type
-    } else {
-      split.var <- seu$Sample
-    }
-    seu <- split(seu, split.var) %>%
+    seu <- split(seu, seu$Sample) %>%
       NormalizeData() %>%
       FindVariableFeatures() %>%
       ScaleData() %>%
