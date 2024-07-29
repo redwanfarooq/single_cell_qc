@@ -36,6 +36,7 @@ cluster:
     --partition={resources.partition}
     --ntasks={resources.tasks}
     --cpus-per-task={threads}
+    --gpus-per-task={resources.gpus}
     --mem={resources.mem_mb}
     --time={resources.runtime}
     --job-name={rule}.{jobid}
@@ -49,6 +50,7 @@ jobname: '{rule}.{jobid}'
 default-resources:
   partition: short
   tasks: 1
+  gpus: 0
   disk_mb: null
   mem_mib: null
 # Specified job resources for each rule (will
