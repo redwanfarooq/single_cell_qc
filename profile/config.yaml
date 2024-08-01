@@ -56,9 +56,12 @@ default-resources:
 # Specified job resources for each rule (will
 # override defaults)
 set-threads:
+  merge: 1
+  cellbender: 1
   droplet_qc: 1
   libraries_qc: 1
   ambient_removal: 1
+  filter: 1
   summary: 1
 # 'mem' and 'runtime' are Snakemake standard resources
 # Values supplied are parsed by the 'humanfriendly'
@@ -70,6 +73,14 @@ set-threads:
 # m, h, d, w, y for seconds, minutes, hours, days, weeks 
 # and years, respectively); converted to minutes
 set-resources:
+  merge:
+    mem: 8GiB
+    runtime: 1h
+  cellbender:
+    partition: gpu
+    gpus: 1
+    mem: 24GiB
+    runtime: 2h
   droplet_qc:
     mem: 32GiB
     runtime: 1h
@@ -79,6 +90,9 @@ set-resources:
   ambient_removal:
     mem: 128GiB
     runtime: 6h
+  filter:
+    mem: 8GiB
+    runtime: 1h
   summary:
     mem: 1GiB
     runtime: 1h

@@ -10,12 +10,15 @@
 # Module
 # --------------------------------------------------
 # REQUIRED
-# Pipeline module for experimental design
+# Pipeline module for QC workflow
 # Options:
-#   qc
+#   default: Default pipeline (EmptyDrops/multimodal/combined cell calling, DecontX/DecontPro ambient removal)
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-module: qc
+#   cellbender (CellBender cell calling/ambient removal)
+#     Additional required configuration:
+#       - 'gex_matrix' (input/output)
+module: 
 
 
 # --------------------------------------------------
@@ -63,9 +66,12 @@ samples: samples.csv
 # Script parameters
 # --------------------------------------------------
 # OPTIONAL
+# Global parameters
+adt_prefix: ADT_ # default: ADT_; prefix for ADT features
+hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
+pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 # droplet_qc.Rmd
-pre_filtered: false # default: false
-cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined
+cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined; only 'multimodal' is supported if using CellBender
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
@@ -96,6 +102,7 @@ atac_filters:
   nucleosome_signal: true # default: true
   tss_enrichment: true # default: true
 adt_filters:
+  zero_ambient: true # default: true; set to false if using CellBender
   isotype_control: null # default: null; regex pattern for isotype control antibody IDs
 # ambient_removal.Rmd
 gex_ambient_removal:
@@ -118,3 +125,14 @@ target_depth:
   ATAC: 25000 # default: 25000
   ADT: 5000 # default: 5000
   HTO: 2000 # default: 2000
+
+
+# --------------------------------------------------
+# Command line flags
+# --------------------------------------------------
+# OPTIONAL
+# If not specified, defaults to ''
+cellbender_args: >-
+  --cuda
+  --fpr 0.01
+  --exclude-feature-types Peaks

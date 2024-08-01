@@ -2,6 +2,7 @@
 Functions for use in Snakemake rule definitions.
 """
 
+import os
 import yaml
 
 
@@ -18,6 +19,63 @@ def parse_info(info: dict) -> dict:
     samples = list(info.keys())
 
     return {"samples": samples}
+
+
+def get_merge_flags(wildcards, **kwargs) -> str:
+    """
+    Get flags for multimodal count matrix merging script.
+
+    Arguments:
+        ``wildcards``: Snakemake ``wildcards`` object.
+        ``kwargs``: keyword arguments for flags.
+
+    Returns:
+        String containing flag to be inserted into shell command.
+    """
+    flags = [
+        f"--{str(key).replace('_', '-')} {str(value).format(sample=wildcards.sample)}"
+        for key, value in kwargs.items()
+        if value is not None
+    ]
+    return " ".join(flags)
+
+
+def get_expected_cells_flag(wildcards, info: dict) -> str:
+    """
+    Get flag for expected number of cells in CellBender.
+
+    Arguments:
+        ``wildcards``: Snakemake ``wildcards`` object.
+        ``info``: dictionary of sample info.
+
+    Returns:
+        String containing flag to be inserted into shell command.
+    """
+    n_cells = round(
+        sum(_.get("cells_loaded", 0) for _ in info[wildcards.sample].values()) * 0.625
+    )
+    return f"--expected-cells {n_cells}" if n_cells > 0 else ""
+
+
+def get_features_matrix(
+    wildcards, data_dir: str, cellbender: bool = False, filtered: bool | None = False
+) -> str:
+    """
+    Get path to merged multimodal count matrix.
+
+    Arguments:
+        ``wildcards``: Snakemake ``wildcards`` object.
+        ``path``: path to pipeline data output directory.
+        ``cellbender``: boolean indicating whether CellBender is used to preprocess count matrices.
+        ``filtered``: boolean indicating whether filtered or raw count matrix is used.
+
+    Returns:
+        Path to merged multimodal count matrix.
+    """
+    return os.path.join(
+        data_dir,
+        f"{'cellbender' if cellbender else 'merge'}/{wildcards.sample}/{'filtered' if filtered else 'raw'}_feature_bc_matrix.h5",
+    )
 
 
 def get_hto_metadata(wildcards, info: dict) -> str:

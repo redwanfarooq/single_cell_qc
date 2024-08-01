@@ -30,6 +30,7 @@ git submodule update --remote
             + scran
             + scDblFinder
             + decontX
+    - [CellBender >=v0.3.0](https://github.com/broadinstitute/CellBender)
 
 # Setup
 1. Install software for global environment (requires Anaconda or Miniconda - see [installation instructions](https://conda.io/projects/conda/en/stable/user-guide/install/index.html))
@@ -59,7 +60,7 @@ Pipeline requires the following input files/folders:
 
 **REQUIRED:**
 
-1. Preprocessed sequencing data as feature-barcode count matrices (either sparse matrix or CSV format)
+1. Preprocessed sequencing data as feature-barcode count matrices (either 10x Matrix Market or BarCounter CSV format)
 2. Sample hashing summary table in CSV format with the following required fields (with headers):
 - **donor**: donor ID
 - **pool**: pool ID
@@ -75,7 +76,8 @@ Output directories will be created in specified locations with subfolders contai
 # Modules
 
 ## Available modules
-- qc
+- default
+- cellbender
 
 ## Adding new module
 1. Add entry to module rule specifications file **config/modules.yaml** with module name and list of rule names

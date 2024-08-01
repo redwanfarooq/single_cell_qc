@@ -9,7 +9,7 @@ scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
 rule summary:
-    input: [os.path.join(config["output_dir"]["reports"], path) for path in expand("libraries_qc/{sample}.html", sample=samples)]
+    input: expand(os.path.join(config["output_dir"]["reports"], "libraries_qc/{sample}.html"), sample=samples)
     output: os.path.join(config["output_dir"]["reports"], "summary/summary_report.html")
     log: os.path.abspath("logs/summary/summary.log")
     threads: 1
