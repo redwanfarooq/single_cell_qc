@@ -7,7 +7,7 @@
 
 # Define rule
 rule cellbender:
-	input: os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
+	input: os.path.join(config["output_dir"]["data"], "merge/{sample}/raw_feature_bc_matrix.h5")
 	output: os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html")
 	log: os.path.abspath("logs/cellbender/{sample}.log")
 	threads: 1

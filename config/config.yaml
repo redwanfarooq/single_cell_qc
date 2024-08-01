@@ -148,3 +148,4 @@ cellbender_args: >-
   --cuda
   --fpr 0.01
   --exclude-feature-types Peaks
+  --total-droplets-included 30000

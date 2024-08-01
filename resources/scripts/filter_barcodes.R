@@ -9,7 +9,7 @@ DOC <- "
 Filter merged multimodal count matrices by cell barcode 
 
 Usage:
-  filter.R --input=<path> --barcodes=<path> --output=<path> [options]
+  filter_barcodes.R --input=<path> --barcodes=<path> --output=<path> [options]
 
 Arguments:
   REQUIRED

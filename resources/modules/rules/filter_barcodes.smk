@@ -8,10 +8,10 @@
 scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
-rule filter:
+rule filter_barcodes:
 	input: os.path.join(config["output_dir"]["reports"], "libraries_qc/{sample}.html")
 	output: os.path.join(config["output_dir"]["data"], "finalised/{sample}/decontaminated_matrix.h5")
-	log: os.path.abspath("logs/filter/{sample}.log")
+	log: os.path.abspath("logs/filter_barcodes/{sample}.log")
 	threads: 1
 	params:
 		script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
@@ -24,7 +24,7 @@ rule filter:
 		"""
 		( \
 		cd {params.script_path} && \
-		./filter.R \
+		./filter_barcodes.R \
 			--input {params.input_path}/{params.features_matrix} \
 			--barcodes {params.input_path}/libraries_qc/{wildcards.sample}/cell_barcodes.txt \
 			--output {output} \
@@ -33,4 +33,4 @@ rule filter:
 
 	
 # Set rule targets
-merge = expand(os.path.join(config["output_dir"]["data"], "finalised/{sample}/decontaminated_matrix.h5"), sample=samples)
+filter_barcodes = expand(os.path.join(config["output_dir"]["data"], "finalised/{sample}/decontaminated_matrix.h5"), sample=samples)

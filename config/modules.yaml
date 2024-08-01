@@ -19,5 +19,5 @@ cellbender:
   - cellbender
   - droplet_qc
   - libraries_qc
-  - filter
+  - filter_barcodes
   - summary
