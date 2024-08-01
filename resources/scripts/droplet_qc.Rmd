@@ -14,10 +14,9 @@ params:
   sample_id: null
   metadata: null
   outdir: null
-  gex_matrix: null
-  atac_matrix: null
-  adt_matrix: null
+  features_matrix: null
   hto_matrix: null
+  hto_prefix: HTO_
   pre_filtered: false
   cell_calling_algorithm: emptydrops
   emptydrops_umi_min: 500
@@ -84,7 +83,7 @@ if (exists("snakemake")) {
 
 # Replace path placeholders and validate params
 unlockBinding("params", .GlobalEnv)
-for (x in c("outdir", "gex_matrix", "atac_matrix", "adt_matrix", "hto_matrix")) {
+for (x in c("outdir", "features_matrix", "hto_matrix")) {
   params[[x]] <- glue::glue(params[[x]], sample = params$sample_id)
   if (length(params[[x]]) == 0) params[[x]] <- NULL # override default value of glue::glue() for null input (character(0)) and return null output
 }
@@ -99,15 +98,12 @@ required <- c(
   "sample_id",
   "metadata",
   "outdir",
-  "gex_matrix"
+  "features_matrix"
 )
 is.missing <- sapply(params[required], is.null)
 if (any(is.missing)) {
   names <- paste(names(params[required])[is.missing], collapse = ", ")
   stop(sprintf("The following required parameters are missing: %s", names))
-}
-if (!params$pre_filtered && params$cell_calling_algorithm %in% c("multimodal", "combined") && is.null(params$atac_matrix) && is.null(params$adt_matrix)) {
-  stop(sprintf("2 or more modalities required for '%s' cell calling algorithm."), params$cell_calling_algorithm)
 }
 
 # Initialise barcodes list
@@ -151,37 +147,18 @@ md <- yaml::yaml.load(params$metadata)
 wl <- names(md)
 ```
 
-```{r load-gex-matrix}
-cat("* **GEX matrix:**", params$gex_matrix, "\n")
-gex.mat <- get.10x.matrix(params$gex_matrix, type = "Gene Expression")
-gex.mat <- gex.mat[, colSums(gex.mat) > 0] # remove cell barcodes with zero counts
-bc$gex <- colnames(gex.mat)
-```
-
-```{r load-atac-matrix, eval=!is.null(params$atac_matrix)}
-cat("* **ATAC matrix:**", params$atac_matrix, "\n")
-atac.mat <- get.10x.matrix(params$atac_matrix, type = "Peaks")
-atac.mat <- atac.mat[, colSums(atac.mat) > 0] # remove cell barcodes with zero counts
-bc$atac <- colnames(atac.mat)
-```
-
-```{r load-adt-matrix, eval=!is.null(params$adt_matrix)}
-cat("* **ADT matrix:**", params$adt_matrix, "\n")
-if (params$adt_matrix == params$gex_matrix) {
-  adt.mat <- get.10x.matrix(params$adt_matrix, type = "Antibody Capture")
-} else {
-  adt.mat <- get.barcounter.matrix(params$adt_matrix, features.pattern = "^ADT_")
-}
-adt.mat <- adt.mat[, colSums(adt.mat) > 0] # remove cell barcodes with zero counts
-bc$adt <- colnames(adt.mat)
+```{r load-features-matrix}
+cat("* **Features matrix:**", params$features_matrix, "\n")
+features.mat <- get.10x.h5(params$features_matrix)
+bc$features <- colnames(features.mat[[1]])
 ```
 
 ```{r load-hto-matrix, eval=!is.null(params$hto_matrix)}
 cat("* **HTO matrix:**", params$hto_matrix, "\n")
-if (params$hto_matrix == params$gex_matrix) {
-  hto.mat <- get.10x.matrix(params$hto_matrix, type = "Antibody Capture")
+if (grepl(pattern = ".mtx.gz$", x = params$hto_matrix)) {
+  hto.mat <- get.10x.matrix(params$hto_matrix, type = c("Antibody Capture", "Multiplexing Capture"))
 } else {
-  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = "^HTO_")
+  hto.mat <- get.barcounter.matrix(params$hto_matrix, features.pattern = paste0("^", params$hto_prefix))
 }
 hto.mat <- hto.mat[match(wl, rownames(hto.mat)), ]
 hto.mat <- hto.mat[, colSums(hto.mat) > 0] # remove cell barcodes with zero counts
@@ -196,20 +173,27 @@ cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
   sum() %>%
   ifelse(. > 0, ., NA)
 bc.cells <- Reduce(intersect, bc)
-cc.stats <- list("loaded" = cells.loaded, "cells" = length(bc.cells))
-gex.mat <- gex.mat[, bc.cells]
+cc.stats <- list("loaded" = cells.loaded, "cells" = length(bc.cells), "empty" = NA, "limited" = NA)
+features.mat[["Gene Expression"]] <- features.mat[["Gene Expression"]][, bc.cells]
 ```
 
 ```{r cell-calling, eval=!params$pre_filtered}
 cat("## Cell calling {.tabset}", "\n\n")
-modalities <- names(bc)[names(bc) != "hto"]
-total.counts <- lapply(
-  modalities,
-  function(x) {
-    data.frame(colSums(get(paste(x, "mat", sep = ".")))) %>%
-      setNames(x) %>%
+modalities <- names(features.mat) %>%
+  case_match(
+    "Gene Expression" ~ "gex",
+    "Peaks" ~ "atac",
+    "Antibody Capture" ~ "adt"
+  )
+total.counts <- mapply(
+  function(mat, type) {
+    data.frame(colSums(mat)) %>%
+      setNames(type) %>%
       tibble::rownames_to_column("barcode")
-  }
+  },
+  mat = features.mat,
+  type = modalities,
+  SIMPLIFY = FALSE
 ) %>%
   Reduce(
     x = .,
@@ -229,23 +213,23 @@ cc.stats$loaded <- cells.loaded
 if (!is.na(cells.loaded)) {
   expected.cells <- cells.loaded * 0.625 # ~62.5% capture rate of cells loaded as per 10x documentation
 } else {
-  expected.cells <- estimate.expected.cells(colSums(gex.mat)) # if cells loaded not available, emprically estimate expected cells using GEX UMI counts
+  expected.cells <- estimate.expected.cells(colSums(features.mat[["Gene Expression"]])) # if cells loaded not available, emprically estimate expected cells using GEX UMI counts
 }
 
 if (params$cell_calling_algorithm %in% c("multimodal", "combined")) {
   cc.res <- multimodal.cell.caller(
-    matrix.list = lapply(params$multimodal_modalities[match(modalities, params$multimodal_modalities)], function(x) get(paste(x, "mat", sep = "."))),
+    matrix.list = features.mat,
     n.expected.cells = expected.cells,
     ordmag.quantile = params$multimodal_ordmag_quantile,
     ordmag.ratio = params$multimodal_ordmag_ratio
   )
-  cells$multi <- bc$gex[bc$gex %in% cc.res]
-  empty$multi <- bc$gex[!(bc$gex %in% cc.res)]
+  cells$multi <- bc$features[bc$features %in% cc.res]
+  empty$multi <- bc$features[!(bc$features %in% cc.res)]
 }
 if (params$cell_calling_algorithm %in% c("emptydrops", "combined")) {
   set.seed(100)
   cc.res <- emptyDropsCellRanger(
-    gex.mat,
+    features.mat[["Gene Expression"]],
     n.expected.cells = expected.cells,
     umi.min = params$emptydrops_umi_min,
     umi.min.frac.median = params$emptydrops_umi_min_frac_median,
@@ -254,23 +238,23 @@ if (params$cell_calling_algorithm %in% c("emptydrops", "combined")) {
     ind.max = params$emptydrops_ind_max,
     niters = params$emptydrops_niters
   )
-  cells$ed <- bc$gex[which(cc.res$FDR < 0.001)]
-  empty$ed <- bc$gex[which(cc.res$FDR >= 0.001 | is.na(cc.res$FDR))]
+  cells$ed <- bc$features[which(cc.res$FDR < 0.001)]
+  empty$ed <- bc$features[which(cc.res$FDR >= 0.001 | is.na(cc.res$FDR))]
   cc.stats$limited <- any(cc.res$Limited[which(cc.res$FDR >= 0.001)])
 }
 if (params$cell_calling_algorithm == "combined") {
-  bc$gex <- intersect(cells$multi, cells$ed)
+  bc$features <- intersect(cells$multi, cells$ed)
   bc.empty <- intersect(empty$multi, empty$ed)
 } else {
-  bc$gex <- cells[[1]]
+  bc$features <- cells[[1]]
   bc.empty <- empty[[1]]
 }
 bc.cells <- Reduce(intersect, bc)
 cc.stats$cells <- length(bc.cells)
 cc.stats$empty <- length(bc.empty)
 
-bcrank.res <- barcodeRanks(gex.mat)
-gex.mat <- gex.mat[, bc.cells]
+bcrank.res <- barcodeRanks(features.mat[["Gene Expression"]])
+features.mat[["Gene Expression"]] <- features.mat[["Gene Expression"]][, bc.cells]
 ```
 
 ```{r cell-calling-classification, eval=!params$pre_filtered}
@@ -292,7 +276,7 @@ ggplotly(
 )
 ```
 
-```{r cell-calling-cross-sensitivities, eval=all(!params$pre_filtered, length(modalities) > 1)}
+```{r cell-calling-cross-sensitivities, eval=all(!params$pre_filtered, length(features.mat) > 1)}
 cat("### Cross-sensitivities", "\n\n")
 for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
   plot <- scatter.plot(
@@ -319,7 +303,7 @@ for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
 cat("### Diagnostics", "\n\n")
 cat("* **Algorithm:**", params$cell_calling_algorithm, "\n")
 if (params$cell_calling_algorithm %in% c("multimodal", "combined")) {
-  cat("* **Modalities:**", params$multimodal_modalities[match(modalities, params$multimodal_modalities)] %>% toupper() %>% paste(collapse = ", "), "\n")
+  cat("* **Modalities:**", toupper(modalities) %>% paste(collapse = ", "), "\n")
   cat("* **OrdMag quantile:**", params$multimodal_ordmag_quantile %>% format(big.mark = ","), "\n")
   cat("* **OrdMag ratio:**", params$multimodal_ordmag_ratio %>% format(big.mark = ","), "\n")
 }
@@ -339,7 +323,7 @@ set.seed(100)
 hto.mat <- hto.mat[, bc.cells]
 dmm <- demuxmix(
   hto = as.matrix(hto.mat),
-  rna = colSums(gex.mat),
+  rna = colSums(features.mat[["Gene Expression"]]),
   model = params$demuxmix_model,
   pAcpt = params$demuxmix_pAcpt^length(wl)
 )
@@ -358,7 +342,7 @@ demux.stats$singlet <- sum(demux.res$Type == "singlet")
 bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
   rownames()
-gex.mat <- gex.mat[, bc.cells]
+features.mat[["Gene Expression"]] <- features.mat[["Gene Expression"]][, bc.cells]
 ```
 
 ```{r hto-demultiplexing-classification, eval=!is.null(params$hto_matrix)}
@@ -425,8 +409,8 @@ cat(sprintf("  + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(colla
 ```{r multiplet-calling, eval=params$multiplet_calling}
 cat("## Multiplet calling {.tabset}", "\n\n")
 set.seed(100)
-known <- if (exists("demux.res")) demux.res[colnames(gex.mat), "Type"] == "multiplet" else rep(FALSE, times = ncol(gex.mat))
-sce <- SingleCellExperiment(assays = list(counts = gex.mat)) %>% logNormCounts()
+known <- if (exists("demux.res")) demux.res[colnames(features.mat[["Gene Expression"]]), "Type"] == "multiplet" else rep(FALSE, times = ncol(features.mat[["Gene Expression"]]))
+sce <- SingleCellExperiment(assays = list(counts = features.mat[["Gene Expression"]])) %>% logNormCounts()
 dec <- modelGeneVar(sce)
 hvg <- getTopHVGs(dec, n = 1000)
 sce <- sce %>% runPCA(subset_row = hvg, ncomponents = 20)
