@@ -8,7 +8,7 @@ scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
 rule merge:
-	output: os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
+	output: os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) and 'cellbender' not in module_rules else 'raw'}_feature_bc_matrix.h5")
 	log: os.path.abspath("logs/merge/{sample}.log")
 	threads: 1
 	params:

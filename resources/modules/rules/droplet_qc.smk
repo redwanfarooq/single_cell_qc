@@ -8,11 +8,7 @@ scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
 rule droplet_qc:
-    input: 
-        if "cellbender" in module_rules:
-            os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html")
-        else:
-            os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
+    input: os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html") if "cellbender" in module_rules else os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
     output: os.path.join(config["output_dir"]["reports"], "droplet_qc/{sample}.html")
     log: os.path.abspath("logs/droplet_qc/{sample}.log")
     threads: 1

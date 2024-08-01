@@ -88,7 +88,7 @@ List read_barcounter_csv(string file) {
 #'
 #' @returns Numeric scalar.
 .ordmag <- function(x, q = 0.99, r = 10) {
-  return(quantile(x, q) - log10(r))
+  return(quantile(x, q, na.rm = TRUE) - log10(r))
 }
 
 
