@@ -13,6 +13,7 @@ rule cellbender:
 	threads: 1
 	params:
 		expected_cells_flag = lambda wildcards: get_expected_cells_flag(wildcards, info=info),
+		ignore_features_flag = lambda wildcards, input: get_ignore_features_flag(hdf5=input, regex=config.get("adt_isotype", None)),
 		custom_flags = config.get("cellbender_args", ""),
 		output_path = lambda wildcards: os.path.join(config["output_dir"]["data"], "cellbender") # DO NOT CHANGE - downstream rules will search for HDF5 files in this directory
 	conda: "cellbender"
@@ -27,6 +28,7 @@ rule cellbender:
 			--input {input} \
 			--cpu-threads {threads} \
 			{params.expected_cells_flag} \
+			{params.ignore_features_flag} \
 			{params.custom_flags} \
 			--output=cellbender.h5 && \
 		mv cellbender.h5 raw_feature_bc_matrix.h5 && \
