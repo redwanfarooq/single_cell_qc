@@ -103,8 +103,8 @@ atac_filters:
   nucleosome_signal: true # default: true
   tss_enrichment: true # default: true
 adt_filters:
-  zero_ambient: true # default: true; set to false if using CellBender
-  high_ambient: true # default: true; set to false if using CellBender
+  zero_ambient: false # default: true; set to false if using CellBender
+  high_ambient: false # default: true; set to false if using CellBender
   high_controls: true # default: true
 # ambient_removal.Rmd
 gex_ambient_removal:
