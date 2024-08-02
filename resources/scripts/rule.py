@@ -70,14 +70,16 @@ def get_ignore_features_flag(hdf5: str, regex: str | None = None) -> str:
     Returns:
         String containing flag to be inserted into shell command.
     """
-    with h5py.File(hdf5, mode="r") as file:
-        features = [_.decode("UTF-8") for _ in list(file["matrix"]["features"]["id"])]
-        adt_isotype = (
-            [str(i) for i, _ in enumerate(features) if re.search(regex, _)]
-            if regex is not None
-            else []
-        )
-    return f"--ignore-features {' '.join(adt_isotype)}" if adt_isotype else ""
+    if os.path.exists(hdf5) and regex is not None:
+        with h5py.File(hdf5, mode="r") as file:
+            features = [
+                _.decode("UTF-8") for _ in list(file["matrix"]["features"]["id"])
+            ]
+        features_to_ignore = [
+            str(i) for i, _ in enumerate(features) if re.search(regex, _)
+        ]
+        return f"--ignore-features {' '.join(features_to_ignore)}"
+    return ""
 
 
 def get_features_matrix(
