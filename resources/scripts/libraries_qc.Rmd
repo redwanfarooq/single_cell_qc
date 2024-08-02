@@ -503,9 +503,10 @@ cat("* **Cells excluded:**", sum(sce$discard, na.rm = TRUE) %>% format(big.mark 
 if (params$adt_filters$zero_ambient) {
   cat("  + **Zero ambient contamination:**", sum(sce$zero.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (is.null(params$adt_isotype)) {
+if (is.null(params$adt_isotype) && params$adt_filters$high_ambient) {
   cat("  + **High ambient contamination:**", sum(sce$high.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-} else {
+}
+if (!is.null(params$adt_isotype) && params$adt_filters$high_controls) {
   cat("  + **High non-specific binding:**", sum(sce$high.controls, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 ```
