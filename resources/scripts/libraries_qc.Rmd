@@ -16,9 +16,10 @@ params:
   outdir: null
   features_matrix: null
   fragments: null
+  adt_isotype: null
   gex_filters: !r list("library_size" = TRUE, "library_complexity" = TRUE, "mitochondrial_fraction" = TRUE)
   atac_filters: !r list("peak_count" = TRUE, "peak_fraction" = TRUE, "blacklist_fraction" = TRUE, "nucleosome_signal" = TRUE, "tss_enrichment" = TRUE)
-  adt_filters: !r list("zero_ambient" = TRUE, "isotype_control" = NULL)
+  adt_filters: !r list("zero_ambient" = TRUE, "high_ambient" = TRUE, "high_controls" = TRUE)
 ---
 
 ```{r setup, include=FALSE}
@@ -443,23 +444,24 @@ TSSPlot(seu, group.by = "low_tss_enrichment") +
 cat("## ADT QC metrics {.tabset}", "\n\n")
 sce <- SingleCellExperiment(assays = list(counts = features.mat[["Antibody Capture"]])) %>%
   add.cell.metadata(droplet.qc.res)
-if (is.null(params$adt_filters$isotype_control)) {
+filters <- NULL
+if (is.null(params$adt_isotype)) {
   qc <- cleanTagCounts(sce)
-  filters <- "high.ambient"
+  if (params$adt_filters$high_ambient) filters <- "high.ambient"
 } else {
-  is.control <- grep(pattern = params$adt_filters$isotype_control, rownames(sce))
+  is.control <- grep(pattern = params$adt_isotype, rownames(sce))
   qc <- cleanTagCounts(sce, controls = is.control)
-  filters <- "high.controls"
+  if (params$adt_filters$high_controls) filters <- "high.controls"
 }
 if (params$adt_filters$zero_ambient) filters <- c(filters, "zero.ambient")
-qc$discard <- combine.filters(lapply(filters, function(x) qc[[x]]))
+qc$discard <- if (!is.null(filters)) combine.filters(lapply(filters, function(x) qc[[x]])) else FALSE
 sce <- add.cell.metadata(sce, qc)
 bc$adt <- colnames(sce[, !sce$discard])
 summary.stats$ADT <- !qc$discard
 ```
 
 ```{r adt-ambient-contamination-isotype-control, eval=!is.null(features.mat[["Antibody Capture"]])}
-if (is.null(params$adt_filters$isotype_control)) {
+if (is.null(params$adt_isotype)) {
   cat("### Ambient contamination", "\n\n")
   ggplotly(
     violin.plot(
@@ -501,7 +503,7 @@ cat("* **Cells excluded:**", sum(sce$discard, na.rm = TRUE) %>% format(big.mark 
 if (params$adt_filters$zero_ambient) {
   cat("  + **Zero ambient contamination:**", sum(sce$zero.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (is.null(params$adt_filters$isotype_control)) {
+if (is.null(params$adt_isotype)) {
   cat("  + **High ambient contamination:**", sum(sce$high.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 } else {
   cat("  + **High non-specific binding:**", sum(sce$high.controls, na.rm = TRUE) %>% format(big.mark = ","), "\n")

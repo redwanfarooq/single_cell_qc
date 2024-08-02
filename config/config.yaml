@@ -68,6 +68,7 @@ samples: samples.csv
 # OPTIONAL
 # Global parameters
 adt_prefix: ADT_ # default: ADT_; prefix for ADT features
+adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
 hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 # droplet_qc.Rmd
@@ -103,7 +104,8 @@ atac_filters:
   tss_enrichment: true # default: true
 adt_filters:
   zero_ambient: true # default: true; set to false if using CellBender
-  isotype_control: null # default: null; regex pattern for isotype control antibody IDs
+  high_ambient: true # default: true; set to false if using CellBender
+  high_controls: true # default: true
 # ambient_removal.Rmd
 gex_ambient_removal:
   skip: false # default: false
