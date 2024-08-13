@@ -148,6 +148,6 @@ target_depth:
 # If not specified, defaults to ''
 cellbender_args: >-
   --cuda
-  --fpr 0.01
+  --fpr 0
   --exclude-feature-types Peaks
   --total-droplets-included 30000
