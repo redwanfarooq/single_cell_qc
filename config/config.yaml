@@ -32,7 +32,7 @@ output_dir:
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/test_06/cellranger/{sample}/outs/raw_feature_bc_matrix.h5
+gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/test_06/cellranger/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
@@ -138,5 +138,6 @@ target_depth:
 cellbender_args: >-
   --cuda
   --fpr 0
-  --exclude-feature-types 'Peaks' 'CRISPR Guide Capture'
+  --exclude-feature-types Peaks
   --total-droplets-included 30000
+  --learning-rate 0.00005
