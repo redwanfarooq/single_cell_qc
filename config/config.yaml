@@ -18,7 +18,7 @@
 #   cellbender (CellBender cell calling/ambient removal)
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-module: 
+module: cellbender
 
 
 # --------------------------------------------------
@@ -27,18 +27,18 @@ module:
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/project_name/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/project_name/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/processed/gex_fb/test_06/qc
+  reports: /project/fuggerlab/rfarooq/project/jurkat_crispri/results/reports/gex_fb/test_06/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /path/to/gex_dir/{sample}/file.ext
-hto_matrix: /path/to/hto_dir/{sample}/file.ext
-atac_matrix: /path/to/atac_dir/{sample}/file.ext
-adt_matrix: /path/to/adt_dir/{sample}/file.ext
+gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/test_06/cellranger/{sample}/outs/raw_feature_bc_matrix.h5
+# hto_matrix: /path/to/hto_dir/{sample}/file.ext
+# atac_matrix: /path/to/atac_dir/{sample}/file.ext
+# adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /path/to/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/test_06/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -70,7 +70,7 @@ samples: samples.csv
 adt_prefix: ADT_ # default: ADT_; prefix for ADT features
 adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
 hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
-pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
+pre_filtered: true # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 # droplet_qc.Rmd
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, multimodal, combined; only 'multimodal' is supported if using CellBender
 emptydrops_umi_min: 500 # default: 500
@@ -127,6 +127,7 @@ target_depth:
   ATAC: 25000 # default: 25000
   ADT: 5000 # default: 5000
   HTO: 2000 # default: 2000
+  CRISPR: 5000 # default: 5000
 
 
 # --------------------------------------------------
@@ -136,6 +137,6 @@ target_depth:
 # If not specified, defaults to ''
 cellbender_args: >-
   --cuda
-  --fpr 0.01
-  --exclude-feature-types Peaks
+  --fpr 0
+  --exclude-feature-types 'Peaks' 'CRISPR Guide Capture'
   --total-droplets-included 30000
