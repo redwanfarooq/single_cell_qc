@@ -29,4 +29,4 @@ rule merge:
 
 	
 # Set rule targets
-merge = expand(os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5"), sample=samples)
+merge = expand(os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) and 'cellbender' not in module_rules else 'raw'}_feature_bc_matrix.h5"), sample=samples)
