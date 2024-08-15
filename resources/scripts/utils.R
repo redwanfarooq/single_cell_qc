@@ -158,6 +158,8 @@ prepend.index <- function(x) {
 #' values in feature type field (v3 only).
 #' @param remove.suffix Logical scalar (default `TRUE`). Remove '-1' suffix automatically
 #' appended to cell barcodes by Cell Ranger.
+#' @param group Optional character scalar. Group name in HDF5 file containing count matrix.
+#' If not specified, will use 'matrix' for v3 and the only group for v2.
 #' 
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
 #' as column names.
