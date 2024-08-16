@@ -87,7 +87,7 @@ multimodal_ordmag_quantile: 0.99 # default: 0.99
 multimodal_ordmag_ratio: 10 # default: 10
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_calling: true # default: true
+multiplet_calling: false # default: true
 scdblfinder_clusters: true # default: true
 scdblfinder_dbr_sd: 1 # default: 1
 multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
