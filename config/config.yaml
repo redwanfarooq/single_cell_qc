@@ -54,11 +54,10 @@ read_counts: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/t
 # REQUIRED
 # Sample hashing summary table in CSV format
 # Required fields:
-#   donor: donor ID
-#   pool: pool ID
-#   sample: sample name
+#   sample_id: unique sample ID
 #   hto: hashtag antibody ID (or 'None' if not used)
 #   cells_loaded: number of cells loaded
+#   hash_id: hash ID (or 'None' if not used)
 samples: samples.csv
 
 

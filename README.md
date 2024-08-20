@@ -7,7 +7,7 @@ git submodule add https://github.com/redwanfarooq/single_cell_qc single_cell_qc
 ```
 - Update submodule to the latest version
 ```
-git submodule update --remote
+git submodule update --remote single_cell_qc
 ```
 
 # Required software
@@ -62,11 +62,10 @@ Pipeline requires the following input files/folders:
 
 1. Preprocessed sequencing data as feature-barcode count matrices (either 10x Matrix Market or BarCounter CSV format)
 2. Sample hashing summary table in CSV format with the following required fields (with headers):
-- **donor**: donor ID
-- **pool**: pool ID
-- **sample**: sample name
+- **sample_id**: sample ID
 - **hto**: hashtag antibody ID (or 'None' if not used)
 - **cells_loaded**: number of cells loaded
+- **hash_id**: hash ID (or 'None' if not used)
 
 # Output
 Output directories will be created in specified locations with subfolders containing the output of each QC step specified in the module:

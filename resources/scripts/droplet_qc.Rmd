@@ -141,10 +141,16 @@ if (!params$pre_filtered) {
 # Data loading
 
 ```{r load-metadata}
-cat("* **Metadata:**", "\n")
-cat("```", params$metadata, "```", sep = "\n")
-md <- yaml::yaml.load(params$metadata)
-wl <- names(md)
+cat("* **Metadata:**", params$metadata, "\n")
+md <- vroom::vroom(
+  params$metadata,
+  delim = ",",
+  col_names = TRUE,
+  show_col_types = FALSE
+) %>%
+  filter(sample_id == params$sample_id) %>%
+  as.data.frame()
+wl <- md$hto
 ```
 
 ```{r load-features-matrix}
@@ -168,8 +174,7 @@ bc$hto <- colnames(hto.mat)
 # Data processing
 
 ```{r no-cell-calling, eval=params$pre_filtered}
-cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
-  unlist() %>%
+cells.loaded <- md$cells_loaded %>% 
   sum() %>%
   ifelse(. > 0, ., NA)
 bc.cells <- Reduce(intersect, bc)
@@ -205,8 +210,7 @@ cells <- list()
 empty <- list()
 cc.stats <- list("loaded" = NA, "cells" = 0, "empty" = 0, "limited" = NA)
 
-cells.loaded <- lapply(md, function(x) x$cells_loaded) %>%
-  unlist() %>%
+cells.loaded <- md$cells_loaded %>%
   sum() %>%
   ifelse(. > 0, ., NA)
 cc.stats$loaded <- cells.loaded
@@ -330,14 +334,14 @@ dmm <- demuxmix(
 models <- lapply(dmm@models, function(x) class(x))
 demux.res <- dmm %>%
   dmmClassify() %>%
-  mutate(Sample = if_else(grepl(",", HTO), "multiplet", HTO))
+  mutate(HTO = if_else(grepl(",", HTO), "multiplet", HTO))
 demux.stats <- demux.res %>%
   as.data.frame() %>%
-  group_by(Sample) %>%
+  group_by(HTO) %>%
   summarise(count = n())
 demux.stats <- demux.stats$count %>%
   as.list() %>%
-  setNames(demux.stats$Sample)
+  setNames(demux.stats$HTO)
 demux.stats$singlet <- sum(demux.res$Type == "singlet")
 bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
@@ -353,11 +357,11 @@ ggplotly(
   bar.plot(
     data = demux.res %>% mutate(Type = factor(Type, levels = c("singlet", "multiplet", "negative", "uncertain"))),
     pos = Type,
-    fill = Sample,
+    fill = HTO,
     position = position_stack(reverse = TRUE),
-    title = "Sample assignment",
+    title = "HTO assignment",
     pos.lab = "Type",
-    fill.lab = "Sample"
+    fill.lab = "HTO"
   ),
   tooltip = c("fill", "x")
 )
@@ -378,7 +382,7 @@ logcounts.plot(
 cat("### Demultiplexed HTO counts", "\n\n")
 logcounts.plot(
   hto.mat,
-  samples = demux.res$Sample,
+  samples = demux.res$HTO,
   scale = 0.95,
   colour = NA,
   show.legend = FALSE,
@@ -420,7 +424,7 @@ if (any(known)) {
     x = sce,
     use.dimred = "PCA",
     doublets = known,
-    samples = table(demux.res$Sample[demux.res$Type %in% c("singlet", "multiplet")]) %>% head(-1)
+    samples = table(demux.res$HTO[demux.res$Type %in% c("singlet", "multiplet")]) %>% head(-1)
   ) %>%
     as.data.frame() %>%
     select(known, predicted)
@@ -477,16 +481,12 @@ ggplotly(
 
 ```{r output}
 metadata <- data.frame(
-  Barcode = bc.cells,
-  Donor = stringr::str_split_i(params$sample_id, pattern = "-", i = 1),
-  Pool = stringr::str_split_i(params$sample_id, pattern = "-", i = 2)
+  barcode = bc.cells,
+  sample_id = params$sample_id
 )
-if (exists("demux.res")) {
-  metadata$Sample <- sapply(demux.res[metadata$Barcode, ]$Sample, function(x) md[[x]]$sample)
-} else {
-  metadata$Sample <- md[[1]]$sample
-}
-
+metadata$hash_id <- if (exists("demux.res")) sapply(demux.res[metadata$barcode, ]$HTO, function(x) md[md$hto == x, "hash_id", drop = TRUE]) else md[1, "hash_id", drop = TRUE]
+metadata <- left_join(metadata, md %>% select(-c(hto, cells_loaded)) %>% distinct(), by = c("sample_id", "hash_id"))
+if (length(unique(metadata$hash_id)) == 1) metadata$hash_id <- NULL # remove hash_id column if all values are the same (i.e. no cell hashing)
 summary.stats <- cc.stats[c("loaded", "cells")] %>%
   as.data.frame() %>%
   dplyr::rename(
