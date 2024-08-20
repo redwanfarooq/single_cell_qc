@@ -129,9 +129,9 @@ droplet.qc.res <- vroom::vroom(
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  mutate(sample_id = if (exists(hash_id)) factor(hash_id, levels = sort(unique(hash_id)), ordered = TRUE) else factor(sample_id, levels = sort(unique(sample_id)), ordered = TRUE)) %>%
+  mutate(sample_id = if (!is.null(.$hash_id)) factor(hash_id, levels = sort(unique(hash_id)), ordered = TRUE) else factor(sample_id, levels = sort(unique(sample_id)), ordered = TRUE)) %>%
   as.data.frame()
-rownames(droplet.qc.res) <- droplet.qc.res$Barcode
+rownames(droplet.qc.res) <- droplet.qc.res$barcode
 droplet.qc.res <- droplet.qc.res[cells, ]
 
 if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt"))) {
