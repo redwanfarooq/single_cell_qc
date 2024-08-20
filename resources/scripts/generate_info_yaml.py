@@ -8,7 +8,7 @@ Requires:
     sample_id: unique sample ID
     hto: hashtag antibody ID (or 'None' if not used)
     cells_loaded: number of cells loaded
-    hash_id: hash ID
+    hash_id: hash ID (or 'None' if not used)
 """
 
 
