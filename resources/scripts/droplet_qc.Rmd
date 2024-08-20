@@ -148,7 +148,8 @@ md <- vroom::vroom(
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  filter(sample_id == params$sample_id)
+  filter(sample_id == params$sample_id) %>%
+  as.data.frame()
 wl <- md$hto
 ```
 
@@ -483,10 +484,9 @@ metadata <- data.frame(
   barcode = bc.cells,
   sample_id = params$sample_id
 )
-if (exists("demux.res")) {
-  metadata$hash_id <- sapply(demux.res[metadata$barcode, ]$HTO, function(x) md[md$hto == x, "hash_id", drop = TRUE])
-}
-metadata <- left_join(metadata, md %>% select(-c(hto, cells_loaded, hash_id)) %>% distinct(), by = "sample_id")
+metadata$hash_id <- if (exists("demux.res")) sapply(demux.res[metadata$barcode, ]$HTO, function(x) md[md$hto == x, "hash_id", drop = TRUE]) else md[1, "hash_id", drop = TRUE]
+metadata <- left_join(metadata, md %>% select(-c(hto, cells_loaded)) %>% distinct(), by = c("sample_id", "hash_id"))
+if (length(unique(metadata$hash_id)) == 1) metadata$hash_id <- NULL # remove hash_id column if all values are the same (i.e. no cell hashing)
 summary.stats <- cc.stats[c("loaded", "cells")] %>%
   as.data.frame() %>%
   dplyr::rename(
