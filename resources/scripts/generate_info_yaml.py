@@ -5,11 +5,10 @@
 Generates info YAML for use with single cell data QC pipeline.
 Requires:
 - Metadata CSV file with the following fields:
-    donor: donor ID
-    pool: pool ID
-    sample: sample name
+    sample_id: unique sample ID
     hto: hashtag antibody ID (or 'None' if not used)
     cells_loaded: number of cells loaded
+    hash_id: hash ID (or 'None' if not used)
 """
 
 
@@ -21,7 +20,6 @@ import yaml
 import docopt
 from loguru import logger
 import pandas as pd
-from id import sample_id
 
 
 # ==============================
@@ -51,21 +49,18 @@ def _main(opt: dict) -> None:
     # Read input CSV and check fields are valid
     md = pd.read_csv(opt["--md"], header=0)
     assert set(md.columns).issuperset(
-        {"donor", "pool", "sample", "hto", "cells_loaded"}
+        {"sample_id", "hto", "cells_loaded", "hash_id"}
     ), "Invalid metadata CSV file."
-
-    # Add unique sample ID
-    md = md.assign(
-        sample_id=lambda x: sample_id(x.donor.tolist(), x.pool.tolist()),
-    )
 
     # Generate info YAML
     logger.info("Generating info YAML")
     generate_info_yaml(
-        df=md[["sample_id", "hto", "sample", "cells_loaded"]],
+        df=md[["sample_id", "hto", "cells_loaded", "hash_id"]],
         filename=os.path.join(opt["--outdir"], "info.yaml"),
     )
-    logger.success("Output file: {}", os.path.abspath(os.path.join(opt["--outdir"], "info.yaml")))
+    logger.success(
+        "Output file: {}", os.path.abspath(os.path.join(opt["--outdir"], "info.yaml"))
+    )
 
 
 def generate_info_yaml(df: pd.DataFrame, filename: str | None = None) -> dict:

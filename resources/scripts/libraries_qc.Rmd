@@ -123,9 +123,9 @@ droplet.qc.res <- vroom::vroom(
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  mutate(Sample = factor(Sample, levels = sort(unique(Sample)), ordered = TRUE)) %>%
+  mutate(sample_id = if (!is.null(.$hash_id)) factor(hash_id, levels = sort(unique(hash_id)), ordered = TRUE) else factor(sample_id, levels = sort(unique(sample_id)), ordered = TRUE)) %>%
   as.data.frame()
-rownames(droplet.qc.res) <- droplet.qc.res$Barcode
+rownames(droplet.qc.res) <- droplet.qc.res$barcode
 bc$cells <- rownames(droplet.qc.res)
 ```
 
@@ -169,7 +169,7 @@ cat("### Library size", "\n\n")
 ggplotly(
   violin.plot(
     colData(sce),
-    x = Sample,
+    x = sample_id,
     y = sum,
     colour = low_lib_size,
     size = 0.1,
@@ -188,7 +188,7 @@ cat("### Library complexity", "\n\n")
 ggplotly(
   violin.plot(
     colData(sce),
-    x = Sample,
+    x = sample_id,
     y = detected,
     colour = low_lib_complexity,
     size = 0.1,
@@ -207,7 +207,7 @@ cat("### Mitochondrial fraction", "\n\n")
 ggplotly(
   violin.plot(
     colData(sce),
-    x = Sample,
+    x = sample_id,
     y = subsets_mito_percent,
     colour = high_mito_percent,
     size = 0.1,
@@ -316,7 +316,7 @@ cat("### Peak count", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
-    x = Sample,
+    x = sample_id,
     y = sum,
     colour = low_peak_count,
     size = 0.1,
@@ -335,7 +335,7 @@ cat("### Peak fraction", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
-    x = Sample,
+    x = sample_id,
     y = FRiP * 100,
     colour = low_peak_fraction,
     size = 0.1,
@@ -353,7 +353,7 @@ cat("### Blacklist fraction", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
-    x = Sample,
+    x = sample_id,
     y = blacklist_fraction * 100,
     colour = high_blacklist_fraction,
     size = 0.1,
@@ -371,7 +371,7 @@ cat("### Nucleosome signal", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
-    x = Sample,
+    x = sample_id,
     y = nucleosome_signal,
     colour = high_nucleosome_signal,
     size = 0.1,
@@ -389,7 +389,7 @@ cat("### TSS enrichment", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
-    x = Sample,
+    x = sample_id,
     y = TSS.enrichment,
     colour = low_tss_enrichment,
     size = 0.1,
@@ -466,7 +466,7 @@ if (is.null(params$adt_isotype)) {
   ggplotly(
     violin.plot(
       colData(sce),
-      x = Sample,
+      x = sample_id,
       y = ambient.scale,
       colour = high.ambient,
       size = 0.1,
@@ -482,7 +482,7 @@ if (is.null(params$adt_isotype)) {
   ggplotly(
     violin.plot(
       colData(sce),
-      x = Sample,
+      x = sample_id,
       y = sum.controls,
       colour = high.controls,
       size = 0.1,
