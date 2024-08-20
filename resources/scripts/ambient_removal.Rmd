@@ -129,7 +129,7 @@ droplet.qc.res <- vroom::vroom(
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
-  mutate(Sample = factor(Sample, levels = sort(unique(Sample)), ordered = TRUE)) %>%
+  mutate(sample_id = if (exists(hash_id)) factor(hash_id, levels = sort(unique(hash_id)), ordered = TRUE) else factor(sample_id, levels = sort(unique(sample_id)), ordered = TRUE)) %>%
   as.data.frame()
 rownames(droplet.qc.res) <- droplet.qc.res$Barcode
 droplet.qc.res <- droplet.qc.res[cells, ]
@@ -177,7 +177,7 @@ if (params$gex_ambient_removal$skip) {
   seu[["decontRNA"]] <- seu[["RNA"]]
 } else {
   if (params$gex_ambient_removal$integrate_samples) {
-    seu <- split(seu, seu$Sample) %>%
+    seu <- split(seu, seu$sample_id) %>%
       NormalizeData() %>%
       FindVariableFeatures() %>%
       ScaleData() %>%
@@ -223,7 +223,7 @@ counts <- Map(
 
 ```{r gex-ambient-removal-samples, eval=all(!is.null(features.mat[["Gene Expression"]]), !params$gex_ambient_removal$skip)}
 cat("### Samples", "\n\n")
-UMAPPlot(seu, group.by = "Sample") +
+UMAPPlot(seu, group.by = "sample_id") +
   labs(title = "Samples") +
   theme_minimal()
 ```
@@ -276,13 +276,7 @@ if (params$adt_ambient_removal$skip) {
   seu[["decontADT"]] <- seu[["ADT"]]
 } else {
   if (params$adt_ambient_removal$integrate_samples) {
-    if (!is.null(params$control)) {
-      seu[["donor_type"]] <- ifelse(seu$Sample == params$control, "Control", "Experimental")
-      split.var <- seu$donor_type
-    } else {
-      split.var <- seu$Sample
-    }
-    seu <- split(seu, split.var) %>%
+    seu <- split(seu, seu$sample_id) %>%
       NormalizeData(normalization.method = "CLR", margin = 2) %>%
       ScaleData(features = rownames(seu)) %>%
       RunPCA(features = rownames(seu)) %>%
@@ -322,7 +316,7 @@ counts <- Map(
 
 ```{r adt-ambient-removal-samples, eval=all(!is.null(features.mat[["Antibody Capture"]]), !params$adt_ambient_removal$skip)}
 cat("### Samples", "\n\n")
-UMAPPlot(seu, group.by = "Sample") +
+UMAPPlot(seu, group.by = "sample_id") +
   labs(title = "Samples") +
   theme_minimal()
 ```
