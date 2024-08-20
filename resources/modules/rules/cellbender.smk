@@ -7,12 +7,13 @@
 
 # Define rule
 rule cellbender:
-	input: os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
+	input: os.path.join(config["output_dir"]["data"], "merge/{sample}/raw_feature_bc_matrix.h5")
 	output: os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html")
 	log: os.path.abspath("logs/cellbender/{sample}.log")
 	threads: 1
 	params:
 		expected_cells_flag = lambda wildcards: get_expected_cells_flag(wildcards, info=info),
+		ignore_features_flag = lambda wildcards, input: get_ignore_features_flag(hdf5=str(input[0]), regex=config.get("adt_isotype", None)),
 		custom_flags = config.get("cellbender_args", ""),
 		output_path = lambda wildcards: os.path.join(config["output_dir"]["data"], "cellbender") # DO NOT CHANGE - downstream rules will search for HDF5 files in this directory
 	conda: "cellbender"
@@ -27,6 +28,7 @@ rule cellbender:
 			--input {input} \
 			--cpu-threads {threads} \
 			{params.expected_cells_flag} \
+			{params.ignore_features_flag} \
 			{params.custom_flags} \
 			--output=cellbender.h5 && \
 		mv cellbender.h5 raw_feature_bc_matrix.h5 && \

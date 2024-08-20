@@ -9,7 +9,7 @@ DOC <- "
 Merge multimodal count matrices into a single 10x Genomics HDF5 file
 
 Usage:
-  merge.R --gex=<path> [--atac=<path>] [--adt=<path>] --output=<path> [options]
+  merge.R --gex=<path> [--atac=<path>] [--adt=<path>] [--adt-prefix=<prefix>] --output=<path> [options]
 
 Arguments:
   REQUIRED
@@ -19,7 +19,7 @@ Arguments:
   OPTIONAL:
   --atac=<path>               Path to ATAC matrix (10x Genomics Matrix Market format)
   --adt=<path>                Path to ADT matrix (10x Genomics Matrix Market format or BarCounter CSV format)
-  --adt-prefix=<prefix>       Prefix for ADT features (default: ADT_)
+  --adt-prefix=<prefix>       Prefix for ADT features [default: ADT_]
 
 Options:
   -h --help                   Show this screen

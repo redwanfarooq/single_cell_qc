@@ -19,18 +19,18 @@ for key, value in parse_info(info).items():
     globals()[key] = value
 
 # Set module rules list
-module_rules = ['merge', 'cellbender', 'droplet_qc', 'libraries_qc', 'filter', 'summary']
+module_rules = ['merge', 'cellbender', 'droplet_qc', 'libraries_qc', 'filter_barcodes', 'summary']
 
 # Import rules
 include: 'rules/merge.smk'
 include: 'rules/cellbender.smk'
 include: 'rules/droplet_qc.smk'
 include: 'rules/libraries_qc.smk'
-include: 'rules/filter.smk'
+include: 'rules/filter_barcodes.smk'
 include: 'rules/summary.smk'
 
 # Set targets list
-targets = [x for rule in [merge, cellbender, droplet_qc, libraries_qc, filter, summary] for x in rule]
+targets = [x for rule in [merge, cellbender, droplet_qc, libraries_qc, filter_barcodes, summary] for x in rule]
 # --------------------------------------------------
 
 

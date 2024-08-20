@@ -8,11 +8,7 @@ scripts_dir = config.get("scripts_dir", "resources/scripts")
 
 # Define rule
 rule droplet_qc:
-    input: 
-        if "cellbender" in module_rules:
-            os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html")
-        else:
-            os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
+    input: os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html") if "cellbender" in module_rules else os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
     output: os.path.join(config["output_dir"]["reports"], "droplet_qc/{sample}.html")
     log: os.path.abspath("logs/droplet_qc/{sample}.log")
     threads: 1
@@ -21,7 +17,7 @@ rule droplet_qc:
         metadata = lambda wildcards: get_hto_metadata(wildcards, info=info),
         features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules, filtered=config.get("pre_filtered", None)),
         hto_matrix = lambda wildcards: config.get("hto_matrix", None),
-        hto_prefix = lambda wildcards: config.get("hto_prefix", None),
+        hto_prefix = config.get("hto_prefix", None),
         outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"), # DO NOT CHANGE - downstream rules will search for output files in this directory
         pre_filtered = config.get("pre_filtered", None),
         cell_calling_algorithm = config.get("cell_calling_algorithm", None),

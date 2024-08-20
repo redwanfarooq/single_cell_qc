@@ -18,8 +18,8 @@ rule libraries_qc:
         droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"),
         outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}"), # DO NOT CHANGE - downstream rules will search for output files in this directory
         features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules, filtered=config.get("pre_filtered", None)),
-        fragments = lambda wildcards: os.path.join(os.path.dirname(config["atac_matrix"]), "../fragments.tsv.gz") if config["atac_matrix"] else None,
-        adt_matrix = lambda wildcards: config.get("adt_matrix", None),
+        fragments = lambda wildcards: os.path.join(os.path.dirname(config["atac_matrix"]), "../fragments.tsv.gz") if config.get("atac_matrix", None) else None,
+        adt_isotype = config.get("adt_isotype", None),
         gex_filters = config.get("gex_filters", None),
         atac_filters = config.get("atac_filters", None),
         adt_filters = config.get("adt_filters", None)

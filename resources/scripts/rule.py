@@ -3,6 +3,8 @@ Functions for use in Snakemake rule definitions.
 """
 
 import os
+import re
+import h5py
 import yaml
 
 
@@ -55,6 +57,29 @@ def get_expected_cells_flag(wildcards, info: dict) -> str:
         sum(_.get("cells_loaded", 0) for _ in info[wildcards.sample].values()) * 0.625
     )
     return f"--expected-cells {n_cells}" if n_cells > 0 else ""
+
+
+def get_ignore_features_flag(hdf5: str, regex: str | None = None) -> str:
+    """
+    Get flag for ignoring features in CellBender.
+
+    Arguments:
+        ``hdf5``: path to merged multimodal count matrix.
+        ``regex``: regular expression to match features to ignore.
+
+    Returns:
+        String containing flag to be inserted into shell command.
+    """
+    if os.path.exists(hdf5) and regex is not None:
+        with h5py.File(hdf5, mode="r") as file:
+            features = [
+                _.decode("UTF-8") for _ in list(file["matrix"]["features"]["id"])
+            ]
+        features_to_ignore = [
+            str(i) for i, _ in enumerate(features) if re.search(regex, _)
+        ]
+        return f"--ignore-features {' '.join(features_to_ignore)}"
+    return ""
 
 
 def get_features_matrix(

@@ -61,7 +61,7 @@ set-threads:
   droplet_qc: 1
   libraries_qc: 1
   ambient_removal: 1
-  filter: 1
+  filter_barcodes: 1
   summary: 1
 # 'mem' and 'runtime' are Snakemake standard resources
 # Values supplied are parsed by the 'humanfriendly'
@@ -90,9 +90,9 @@ set-resources:
   ambient_removal:
     mem: 128GiB
     runtime: 6h
-  filter:
+  filter_barcodes:
     mem: 8GiB
     runtime: 1h
   summary:
-    mem: 1GiB
+    mem: 8GiB
     runtime: 1h
