@@ -113,7 +113,7 @@ if (("Gene Expression" %in% modalities && !params$gex_ambient_removal$skip) || (
 ```{r load-libraries-qc-results}
 cat("* **Libraries QC results:**", params$libraries_qc, "\n")
 cells <- vroom::vroom(
-  file.path(params$libraries_qc, "cell_barcodes.txt"),
+  file.path(params$libraries_qc, "cell_barcodes.txt.gz"),
   delim = "\t",
   col_names = FALSE,
   show_col_types = FALSE
@@ -124,7 +124,7 @@ cells <- vroom::vroom(
 ```{r load-droplet-qc-results}
 cat("* **Droplet processing QC results:**", params$droplet_qc, "\n")
 droplet.qc.res <- vroom::vroom(
-  file.path(params$droplet_qc, "metadata.tsv"),
+  file.path(params$droplet_qc, "metadata.tsv.gz"),
   delim = "\t",
   col_names = TRUE,
   show_col_types = FALSE
@@ -134,9 +134,9 @@ droplet.qc.res <- vroom::vroom(
 rownames(droplet.qc.res) <- droplet.qc.res$barcode
 droplet.qc.res <- droplet.qc.res[cells, ]
 
-if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt"))) {
+if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt.gz"))) {
   empty <- vroom::vroom(
-    file.path(params$droplet_qc, "empty_droplet_barcodes.txt"),
+    file.path(params$droplet_qc, "empty_droplet_barcodes.txt.gz"),
     delim = "\t",
     col_names = FALSE,
     show_col_types = FALSE
@@ -147,8 +147,7 @@ if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt"))) {
 
 ```{r load-features-matrix}
 cat("* **Features matrix:**", params$features_matrix, "\n")
-features.mat <- get.10x.h5(params$features_matrix)
-features.mat <- lapply(features.mat, function(x, cells) x[, cells], cells = cells)
+features.mat <- get.10x.h5(params$features_matrix, cells = cells)
 # Add ATAC counts to output without any further processing
 counts <- lapply(
   counts,
