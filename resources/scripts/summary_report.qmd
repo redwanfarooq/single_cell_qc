@@ -41,13 +41,13 @@ pn.extension("plotly")
 ```{python}
 PATHS = {
     "droplet_qc": [
-        "droplet_qc/{sample}/barcode_stats.tsv",
-        "droplet_qc/{sample}/hto_signal.tsv",
-        "droplet_qc/{sample}/metadata.tsv",
+        "droplet_qc/{sample}/barcode_stats.tsv.gz",
+        "droplet_qc/{sample}/hto_signal.tsv.gz",
+        "droplet_qc/{sample}/metadata.tsv.gz",
     ],
     "libraries_qc": [
-        "libraries_qc/{sample}/qc_filters.tsv",
-        "libraries_qc/{sample}/cell_barcodes.txt",
+        "libraries_qc/{sample}/qc_filters.tsv.gz",
+        "libraries_qc/{sample}/cell_barcodes.txt.gz",
     ],
 }
 

@@ -144,7 +144,6 @@ if (!params$pre_filtered) {
 cat("* **Metadata:**", params$metadata, "\n")
 md <- vroom::vroom(
   params$metadata,
-  delim = ",",
   col_names = TRUE,
   show_col_types = FALSE
 ) %>%
@@ -516,12 +515,12 @@ summary.stats <- summary.stats[, match(c("cells_loaded", "cells_recovered", "sin
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write(
   metadata,
-  file = file.path(params$outdir, "metadata.tsv"),
+  file = file.path(params$outdir, "metadata.tsv.gz"),
   delim = "\t"
 )
 vroom::vroom_write(
   summary.stats,
-  file = file.path(params$outdir, "barcode_stats.tsv"),
+  file = file.path(params$outdir, "barcode_stats.tsv.gz"),
   delim = "\t"
 )
 if (exists("dmm")) {
@@ -530,14 +529,14 @@ if (exists("dmm")) {
       as.matrix() %>%
       t() %>%
       as.data.frame(),
-    file = file.path(params$outdir, "hto_signal.tsv"),
+    file = file.path(params$outdir, "hto_signal.tsv.gz"),
     delim = "\t"
   )
 }
 if (exists("bc.empty")) {
   vroom::vroom_write_lines(
     bc.empty,
-    file = file.path(params$outdir, "empty_droplet_barcodes.txt")
+    file = file.path(params$outdir, "empty_droplet_barcodes.txt.gz")
   )
 }
 

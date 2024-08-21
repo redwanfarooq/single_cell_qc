@@ -4,7 +4,7 @@
 """
 Generates info YAML for use with single cell data QC pipeline.
 Requires:
-- Metadata CSV file with the following fields:
+- Metadata table file with the following fields:
     sample_id: unique sample ID
     hto: hashtag antibody ID (or 'None' if not used)
     cells_loaded: number of cells loaded
@@ -33,7 +33,7 @@ Usage:
   generate_info_yaml.py --md=<md> --outdir=<outdir> [options]
 
 Arguments:
-  -m --md=<md>              Metadata CSV file (required)
+  -m --md=<md>              Metadata table file (required)
   -o --outdir=<outdir>      Output directory (required)
 
 Options:
@@ -47,10 +47,10 @@ Options:
 @logger.catch(reraise=True)
 def _main(opt: dict) -> None:
     # Read input CSV and check fields are valid
-    md = pd.read_csv(opt["--md"], header=0)
+    md = pd.read_csv(opt["--md"], header=0, sep=None, engine="python")
     assert set(md.columns).issuperset(
         {"sample_id", "hto", "cells_loaded", "hash_id"}
-    ), "Invalid metadata CSV file."
+    ), "Invalid metadata table file."
 
     # Generate info YAML
     logger.info("Generating info YAML")
