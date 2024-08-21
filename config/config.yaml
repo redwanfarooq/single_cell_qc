@@ -52,13 +52,13 @@ read_counts: /project/fuggerlab/rfarooq/project/jurkat_crispri/data/raw/gex_fb/t
 # *** RELATIVE paths from 'metadata_dir' ***
 # --------------------------------------------------
 # REQUIRED
-# Sample hashing summary table in CSV format
+# Sample metadata table in delimited file format (e.g. TSV, CSV)
 # Required fields:
 #   sample_id: unique sample ID
 #   hto: hashtag antibody ID (or 'None' if not used)
 #   cells_loaded: number of cells loaded
 #   hash_id: hash ID (or 'None' if not used)
-samples: samples.csv
+samples: samples.tsv
 
 
 # --------------------------------------------------

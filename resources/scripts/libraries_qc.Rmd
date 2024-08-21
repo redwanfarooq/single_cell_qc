@@ -116,9 +116,9 @@ cat(prepend.index("Output text file containing list of barcodes passing all QC f
 # Data loading
 
 ```{r load-droplet-qc-results}
-cat("* **Droplet processing QC results:**", file.path(params$droplet_qc, "metadata.tsv"), "\n")
+cat("* **Droplet processing QC results:**", params$droplet_qc, "\n")
 droplet.qc.res <- vroom::vroom(
-  file.path(params$droplet_qc, "metadata.tsv"),
+  file.path(params$droplet_qc, "metadata.tsv.gz"),
   delim = "\t",
   col_names = TRUE,
   show_col_types = FALSE
@@ -522,11 +522,11 @@ summary.stats <- summary.stats %>%
 if (!dir.exists(params$outdir)) dir.create(params$outdir, recursive = TRUE)
 vroom::vroom_write_lines(
   bc.pass,
-  file = file.path(params$outdir, "cell_barcodes.txt")
+  file = file.path(params$outdir, "cell_barcodes.txt.gz")
 )
 vroom::vroom_write(
   summary.stats,
-  file = file.path(params$outdir, "qc_filters.tsv"),
+  file = file.path(params$outdir, "qc_filters.tsv.gz"),
   delim = "\t"
 )
 
