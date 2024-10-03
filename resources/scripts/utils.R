@@ -3,7 +3,78 @@
 # ==============================
 
 
-`%>%` <- magrittr::`%>%` # explicitly define pipe operator
+# Explicitly define pipe operator
+`%>%` <- magrittr::`%>%`
+
+
+# C++ function for efficiently reading BarCounter CSV file to sparse matrix
+Rcpp::sourceCpp(
+  code = r"(
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <Rcpp.h>
+
+using namespace std;
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+List read_barcounter_csv(string file) {
+  // read header line and extract feature names
+  ifstream infile(file);
+  string line;
+  getline(infile, line);
+  istringstream iss(line);
+  string feature;
+  vector<string> features;
+  while(getline(iss, feature, ',')) {
+    features.emplace_back(feature);
+  }
+  features.erase(features.begin()); // remove barcode column header
+
+  // initialise vectors to store barcodes, row indices, values, and column pointers
+  vector<string> barcodes;
+  vector<int> i, x;
+  vector<int> p = {0};
+
+  // read remaining lines and extract barcodes, row indices, values, and column pointers
+  while (getline(infile, line)) {
+    // extract barcode
+    istringstream iss(line);
+    string barcode;
+    getline(iss, barcode, ',');
+    barcodes.emplace_back(barcode);
+
+    // read values
+    vector<int> y;
+    string val;
+    while(getline(iss, val, ',')) {
+      y.emplace_back(stoi(val));
+    }
+
+    // extract row indices and values for non-zero entries
+    for (size_t j = 0; j < y.size(); ++j) {
+      if (y[j] > 0) {
+        i.emplace_back(j);
+        x.emplace_back(y[j]);
+      }
+    }
+
+    // set next column pointer
+    p.emplace_back(i.size());
+  }
+
+  return List::create(
+    Named("i") = i,
+    Named("p") = p,
+    Named("x") = x,
+    Named("features") = features,
+    Named("barcodes") = barcodes
+  );
+}
+)"
+)
 
 
 #' Modified implementation of CellRanger OrdMag algorithm
@@ -17,7 +88,7 @@
 #'
 #' @returns Numeric scalar.
 .ordmag <- function(x, q = 0.99, r = 10) {
-  return(quantile(x, q) - log10(r))
+  return(quantile(x, q, na.rm = TRUE) - log10(r))
 }
 
 
@@ -72,6 +143,94 @@ prepend.index <- function(x) {
   str <- glue::glue("{i}. {x}")
   list.index <<- i + 1
   return(str)
+}
+
+
+#' Get 10x count matrix
+#' 
+#' Loads 10x count matrix (in HDF5 format).
+#' 
+#' @param file Path to file.
+#' @param version Character scalar. 10x HDF5 version ('auto', 'v2', or 'v3').
+#' @param cells Character vector. If specified, will subset to matching cell
+#' barcodes.
+#' @param type Character vector. If specified, will subset to features with matching
+#' values in feature type field (v3 only).
+#' @param remove.suffix Logical scalar (default `TRUE`). Remove '-1' suffix automatically
+#' appended to cell barcodes by Cell Ranger.
+#' @param group Optional character scalar. Group name in HDF5 file containing count matrix.
+#' If not specified, will use 'matrix' for v3 and the only group for v2.
+#' 
+#' @returns A sparse matrix of counts with features as row names and cell barcodes
+#' as column names.
+#'
+#' @export
+get.10x.h5 <- function(file,
+                       version = c("auto", "v2", "v3"),
+                       cells = NULL,
+                       type = NULL,
+                       remove.suffix = TRUE,
+                       group = NULL) {
+  if (!file.exists(file)) stop(file, " does not exist")
+
+  infile <- hdf5r::H5File$new(filename = file, mode = "r")
+
+  version <- match.arg(version)
+  if (version == "auto") {
+    version <- if (hdf5r::existsGroup(infile, "matrix")) "v3" else "v2"
+    message("Detected 10x HDF5 version: ", version)
+  }
+  features <- if (version == "v2") "genes" else "features/id"
+
+  if (is.null(group)) {
+    if (version == "v3") {
+      group <- "matrix"
+    } else {
+      group <- names(infile)
+      if (length(group) > 1) stop("Multiple groups detected: ", paste(group, collapse = ", "), ". Please specify 'group' parameter.")
+    }
+  }
+  counts <- infile[[paste(group, "data", sep = "/")]]
+  indices <- infile[[paste(group, "indices", sep = "/")]]
+  indptr <- infile[[paste(group, "indptr", sep = "/")]]
+  shape <- infile[[paste(group, "shape", sep = "/")]]
+  features <- infile[[paste(group, features, sep = "/")]]
+  barcodes <- infile[[paste(group, "barcodes", sep = "/")]]
+  matrix <- Matrix::sparseMatrix(
+    i = indices[],
+    p = indptr[],
+    x = as.numeric(counts[]),
+    dims = shape[],
+    dimnames = list(features[], barcodes[]),
+    index1 = FALSE,
+    repr = "C"
+  )
+
+  if (remove.suffix) colnames(matrix) <- gsub(pattern = "-1$", replacement = "", colnames(matrix))
+
+  if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
+  if (any(is.na(colnames(matrix)))) {
+    warning(sum(is.na(colnames(matrix))), " barcode(s) in 'cells' not present in count matrix")
+    matrix <- matrix[, !is.na(colnames(matrix))]
+  }
+
+  if (version == "v3") {
+    feature.type <- infile[["matrix/features/feature_type"]]
+    if (!is.null(type)) {
+      matrix <- matrix[feature.type[] %in% type, ]
+    } else {
+      if (length(unique(feature.type[])) > 1) message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ". Returning list of matrices; please specify 'type' parameter to return a single matrix.")
+      matrix <- lapply(
+        unique(feature.type[]),
+        function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
+        matrix = matrix,
+        feature.type = feature.type[]
+      ) |>
+        setNames(unique(feature.type[]))
+    }
+
+    return(matrix)
+  }
 }
 
 
@@ -186,7 +345,7 @@ get.10x.features <- function(file, type = NULL) {
 #' @param add.suffix Logical scalar (default `FALSE`). Add '-1' suffix to match
 #'  cell barcodes from Cell Ranger.
 #'
-#' @returns A matrix of counts with features as row names and cell barcodes
+#' @returns A sparse matrix of counts with features as row names and cell barcodes
 #'  as column names.
 #'
 #' @export
@@ -197,18 +356,25 @@ get.barcounter.matrix <- function(file,
                                   add.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
 
-  matrix <- vroom::vroom(file, delim = ",", col_names = TRUE, show_col_types = FALSE) %>%
-    tibble::column_to_rownames("cell_barcode") %>%
-    as.matrix() %>%
-    t()
+  # Efficiently read BarCounter CSV file into sparse matrix without loading dense matrix into memory
+  sparse <- read_barcounter_csv(file)
+  matrix <- Matrix::sparseMatrix(
+    i = sparse$i,
+    p = sparse$p,
+    x = sparse$x,
+    dims = c(length(sparse$features), length(sparse$barcodes)),
+    dimnames = list(sparse$features, sparse$barcodes),
+    index1 = FALSE,
+    repr = "C"
+  )
   if (add.suffix) colnames(matrix) <- paste(colnames(matrix), "1", sep = "-")
-  if (!include.total) matrix <- matrix[-1, ]
+  if (!include.total) matrix <- matrix[rownames(matrix) != "total", ]
   if (!is.null(cells)) matrix <- matrix[, match(cells, colnames(matrix))]
   if (any(is.na(colnames(matrix)))) {
     warning(sum(is.na(colnames(matrix))), " barcode(s) in 'cells' not present in count matrix")
     matrix <- matrix[, !is.na(colnames(matrix))]
   }
-  if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, rownames(matrix)), ]
+  if (!is.null(features.pattern)) matrix <- matrix[grepl(pattern = features.pattern, x = rownames(matrix)), ]
 
   return(matrix)
 }
@@ -378,6 +544,7 @@ multimodal.cell.caller <- function(matrix.list,
                                    ordmag.quantile = 0.99,
                                    ordmag.ratio = 10) {
   if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
+  if (length(matrix.list) < 2) stop("'matrix.list' must contain at least 2 matrices")
   if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
 
   matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
@@ -718,6 +885,7 @@ logcounts.plot <- function(matrix,
                            samples = NULL,
                            title = NULL) {
   data <- matrix %>%
+    as.matrix() %>%
     t() %>%
     as.data.frame() %>%
     dplyr::mutate(across(everything(), ~ log10(.x + pseudocount)))
