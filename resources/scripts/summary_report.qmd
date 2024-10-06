@@ -365,8 +365,8 @@ if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     )
 
     df_assignment = [
-        pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["Barcode", "Sample"]]
-        .groupby("Sample")
+        pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["barcode", "hash_id"]]
+        .groupby("hash_id")
         .agg("count")
         .transpose()
         .assign(Sample=sample)
