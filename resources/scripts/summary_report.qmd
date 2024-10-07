@@ -25,6 +25,7 @@ target_depth = "KEY:VALUE"
 
 ```{python}
 import os
+import gzip
 import re
 import session_info
 import numpy as np
@@ -536,15 +537,15 @@ cols = [
 if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
     cells = {sample: [] for sample in files["libraries_qc"].keys()}
     for sample, filelist in files["libraries_qc"].items():
-        with open(filelist[1]) as file:
+        with gzip.open(filelist[1], mode="rt", encoding="utf-8") as file:
             for line in file:
                 cells[sample].append(line.rstrip())
 
     df_assignment = [
-        pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["Barcode", "Sample"]]
-        .set_index("Barcode", inplace=False)
+        pd.read_csv(files[2], sep="\t", header=0, index_col=None)[["barcode", "hash_id"]]
+        .set_index("barcode", inplace=False)
         .astype(str)
-        .rename(columns={"Sample": "Assignment"})
+        .rename(columns={"hash_id": "Assignment"})
         .assign(Sample=sample)
         for sample, files in files["droplet_qc"].items()
     ]
