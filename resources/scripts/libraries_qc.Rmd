@@ -295,7 +295,7 @@ if (params$atac_filters$peak_fraction) {
 }
 if (params$atac_filters$blacklist_fraction) {
   seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
-  qc$high_blacklist_fraction <- isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) # only exclude extreme outliers
+  qc$high_blacklist_fraction <- seu$blacklist_fraction > 0.01 # hard threshold of 0.01 as per ENCODE consortium guidelines
 }
 if (params$atac_filters$nucleosome_signal) {
   seu <- NucleosomeSignal(seu)
@@ -303,7 +303,7 @@ if (params$atac_filters$nucleosome_signal) {
 }
 if (params$atac_filters$tss_enrichment) {
   seu <- TSSEnrichment(seu, fast = FALSE)
-  qc$low_tss_enrichment <- isOutlier(seu$TSS.enrichment, type = "lower", log = FALSE)
+  qc$low_tss_enrichment <- isOutlier(seu$TSS.enrichment, type = "lower", log = TRUE)
 }
 qc$discard <- combine.filters(qc)
 seu <- add.cell.metadata(seu, qc)
@@ -395,7 +395,8 @@ ggplotly(
     size = 0.1,
     title = "Low TSS enrichment score",
     x.lab = "Sample",
-    y.lab = "TSS enrichment score"
+    y.lab = "TSS enrichment score",
+    log = TRUE
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
