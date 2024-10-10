@@ -18,7 +18,7 @@
 #   cellbender (CellBender cell calling/ambient removal)
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-module: 
+module: default
 
 
 # --------------------------------------------------
@@ -27,18 +27,18 @@ module:
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/gex_atac/qc
-  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/gex_atac/qc
+  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/gex_atac/test_02/qc
+  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/gex_atac/test_02/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
-atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
+atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/qc/count_reads/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -114,7 +114,7 @@ gex_ambient_removal:
   cluster_res: 0.05 # default: 0.05
   cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
 adt_ambient_removal:
-  skip: false # default: false
+  skip: true # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
@@ -124,8 +124,8 @@ adt_ambient_removal:
 target_depth:
   GEX: 20000 # default: 20000
   ATAC: 25000 # default: 25000
-  ADT: 5000 # default: 5000
-  HTO: 2000 # default: 2000
+  # ADT: 5000 # default: 5000
+  # HTO: 2000 # default: 2000
 
 
 # --------------------------------------------------
@@ -133,8 +133,8 @@ target_depth:
 # --------------------------------------------------
 # OPTIONAL
 # If not specified, defaults to ''
-cellbender_args: >-
-  --cuda
-  --fpr 0.01
-  --exclude-feature-types Peaks
-  --total-droplets-included 30000
+# cellbender_args: >-
+#   --cuda
+#   --fpr 0.01
+#   --exclude-feature-types Peaks
+#   --total-droplets-included 30000
