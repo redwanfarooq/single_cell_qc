@@ -91,6 +91,10 @@ scdblfinder_clusters: true # default: true
 scdblfinder_dbr_sd: 1 # default: 1
 multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
 # libraries_qc.Rmd
+# Each filter can be specified as 'false', 'true' or a numeric threshold
+# If set to 'false', the filter will be skipped
+# If set to 'true', the filter will be applied using automated outlier-based thresholds
+# If set to a numeric threshold, the filter will be applied using the specified threshold
 gex_filters:
   library_size: true # default: true
   library_complexity: true # default: true
