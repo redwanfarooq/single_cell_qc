@@ -96,13 +96,13 @@ multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
 # If set to 'true', the filter will be applied using automated outlier-based thresholds
 # If set to a numeric threshold, the filter will be applied using the specified threshold
 gex_filters:
-  library_size: true # default: true
-  library_complexity: true # default: true
-  mitochondrial_fraction: true # default: true
+  library_size: 200 # default: true
+  library_complexity: 100 # default: true
+  mitochondrial_fraction: 0.5 # default: true
 atac_filters:
-  peak_count: true # default: true
-  peak_fraction: true # default: true
-  blacklist_fraction: true # default: true
+  peak_count: 200 # default: true
+  peak_fraction: 0.25 # default: true
+  blacklist_fraction: 0.01 # default: true
   nucleosome_signal: true # default: true
   tss_enrichment: true # default: true
 adt_filters:
