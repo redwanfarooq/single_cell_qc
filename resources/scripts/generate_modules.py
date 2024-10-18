@@ -2,7 +2,7 @@
 
 
 """
-Generates module scripts for preprocessing pipeline.
+Generates module scripts for Snakemake pipeline.
 Requires:
     - Module rule specifications file
         YAML format with module names as keys and lists of module rules as values
@@ -25,7 +25,7 @@ from loguru import logger
 # ==============================
 # Define options
 DOC = """
-Generate module scripts for preprocessing pipeline
+Generate module scripts for Snakemake pipeline
 
 Usage:
   generate_modules.py --modules=<modules> --template=<template> --outdir=<outdir> [options]
