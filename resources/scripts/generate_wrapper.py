@@ -2,7 +2,7 @@
 
 
 """
-Generates wrapper script for single cell data QC pipeline.
+Generates wrapper script for Snakemake pipeline.
 Requires:
     - Wrapper script template file
 """
@@ -22,7 +22,7 @@ from loguru import logger
 # ==============================
 # Define options
 DOC = """
-Generate wrapper script for single cell data QC pipeline
+Generate wrapper script for Snakemake pipeline
 
 Usage:
   generate_wrapper.py --module=<module> --template=<template> [--file=<file>] [options]
