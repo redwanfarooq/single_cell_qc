@@ -26,7 +26,7 @@ rule filter_barcodes:
 		cd {params.script_path} && \
 		./filter_barcodes.R \
 			--input {params.input_path}/{params.features_matrix} \
-			--barcodes {params.input_path}/libraries_qc/{wildcards.sample}/cell_barcodes.txt \
+			--barcodes {params.input_path}/libraries_qc/{wildcards.sample}/cell_barcodes.txt.gz \
 			--output {output} \
 		) > {log} 2>&1
 		"""
