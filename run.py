@@ -64,7 +64,7 @@ def _get_cmd(update: bool = False) -> list[str]:
         )
         cmd += _cmd(
             f"{SCRIPTS_DIR}/generate_info_yaml.py",
-            f"--md={SAMPLES_CSV}",
+            f"--md={SAMPLES_TABLE}",
             f"--outdir={METADATA_DIR}",
         )
         cmd += _cmd("snakemake --profile=profile")
@@ -79,7 +79,7 @@ with open(file="config/config.yaml", mode="r", encoding="UTF-8") as file:
     SCRIPTS_DIR = config.get("scripts_dir", "resources/scripts")
     METADATA_DIR = config.get("metadata_dir", "metadata")
     try:
-        SAMPLES_CSV = os.path.join(METADATA_DIR, config["samples"])
+        SAMPLES_TABLE = os.path.join(METADATA_DIR, config["samples"])
         MODULE = config["module"]
     except KeyError as err:
         raise KeyError(f"{err} not specified in '{file.name}'") from err

@@ -18,7 +18,9 @@ dependencies:
   - attrs=23.2.0
   - babel=2.14.0
   - beautifulsoup4=4.12.2
+  - binutils=2.40
   - binutils_impl_linux-64=2.40
+  - binutils_linux-64=2.40
   - bioconductor-annotationdbi=1.64.1
   - bioconductor-annotationfilter=1.26.0
   - bioconductor-beachmat=2.18.0
@@ -82,15 +84,17 @@ dependencies:
   - bwidget=1.9.14
   - bzip2=1.0.8
   - c-ares=1.25.0
-  - ca-certificates=2023.11.17
+  - c-compiler=1.7.0
+  - ca-certificates=2024.3.11
   - cached-property=1.5.2
   - cached_property=1.5.2
   - cairo=1.18.0
-  - certifi=2023.11.17
+  - certifi=2024.2.2
   - cffi=1.16.0
   - charset-normalizer=3.3.2
   - comm=0.2.1
   - curl=8.5.0
+  - cxx-compiler=1.7.0
   - debugpy=1.8.0
   - decorator=5.1.1
   - defusedxml=0.7.1
@@ -108,13 +112,17 @@ dependencies:
   - fqdn=1.5.1
   - freetype=2.12.1
   - fribidi=1.0.10
-  - gcc_impl_linux-64=13.2.0
+  - gcc=12.3.0
+  - gcc_impl_linux-64=12.3.0
+  - gcc_linux-64=12.3.0
   - gettext=0.21.1
-  - gfortran_impl_linux-64=13.2.0
+  - gfortran_impl_linux-64=12.3.0
   - glpk=5.0
   - gmp=6.3.0
   - graphite2=1.3.13
-  - gxx_impl_linux-64=13.2.0
+  - gxx=12.3.0
+  - gxx_impl_linux-64=12.3.0
+  - gxx_linux-64=12.3.0
   - harfbuzz=8.3.0
   - icu=73.2
   - idna=3.6
@@ -158,7 +166,7 @@ dependencies:
   - libexpat=2.5.0
   - libffi=3.4.2
   - libgcc=7.2.0
-  - libgcc-devel_linux-64=13.2.0
+  - libgcc-devel_linux-64=12.3.0
   - libgcc-ng=13.2.0
   - libgfortran-ng=13.2.0
   - libgfortran5=13.2.0
@@ -171,11 +179,11 @@ dependencies:
   - libnsl=2.0.1
   - libopenblas=0.3.25
   - libpng=1.6.39
-  - libsanitizer=13.2.0
+  - libsanitizer=12.3.0
   - libsodium=1.0.18
   - libsqlite=3.44.2
   - libssh2=1.11.0
-  - libstdcxx-devel_linux-64=13.2.0
+  - libstdcxx-devel_linux-64=12.3.0
   - libstdcxx-ng=13.2.0
   - libtiff=4.6.0
   - libuuid=2.38.1
@@ -199,7 +207,7 @@ dependencies:
   - nest-asyncio=1.5.9
   - notebook=7.0.6
   - notebook-shim=0.2.3
-  - openssl=3.2.0
+  - openssl=3.2.1
   - overrides=7.4.0
   - packaging=23.2
   - pandoc=3.1.3
@@ -561,4 +569,3 @@ dependencies:
   - zipp=3.17.0
   - zlib=1.2.13
   - zstd=1.5.5
-

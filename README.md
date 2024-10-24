@@ -7,7 +7,7 @@ git submodule add https://github.com/redwanfarooq/single_cell_qc single_cell_qc
 ```
 - Update submodule to the latest version
 ```
-git submodule update --remote
+git submodule update --remote single_cell_qc
 ```
 
 # Required software
@@ -15,6 +15,7 @@ git submodule update --remote
     - [Snakemake >=v7.31](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)
     - [docopt >=v0.6](https://github.com/docopt/docopt)
     - [pandas >=v2.0](https://pandas.pydata.org/docs/getting_started/install.html)
+    - [loguru >=v0.7](https://github.com/Delgan/loguru)
 2. Specific modules
     - [R >=v4.3](https://cran.r-project.org)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)
@@ -30,6 +31,7 @@ git submodule update --remote
             + scran
             + scDblFinder
             + decontX
+    - [CellBender >=v0.3.0](https://github.com/broadinstitute/CellBender)
 
 # Setup
 1. Install software for global environment (requires Anaconda or Miniconda - see [installation instructions](https://conda.io/projects/conda/en/stable/user-guide/install/index.html))
@@ -59,13 +61,12 @@ Pipeline requires the following input files/folders:
 
 **REQUIRED:**
 
-1. Preprocessed sequencing data as feature-barcode count matrices (either sparse matrix or CSV format)
-2. Sample hashing summary table in CSV format with the following required fields (with headers):
-- **donor**: donor ID
-- **pool**: pool ID
-- **sample**: sample name
+1. Preprocessed sequencing data as feature-barcode count matrices (either 10x Matrix Market or BarCounter CSV format)
+2. Sample metadata table in delimited file format (e.g. TSV, CSV) with the following required fields (with headers):
+- **sample_id**: sample ID
 - **hto**: hashtag antibody ID (or 'None' if not used)
 - **cells_loaded**: number of cells loaded
+- **hash_id**: hash ID (or 'None' if not used)
 
 # Output
 Output directories will be created in specified locations with subfolders containing the output of each QC step specified in the module:
@@ -75,7 +76,8 @@ Output directories will be created in specified locations with subfolders contai
 # Modules
 
 ## Available modules
-- qc
+- default
+- cellbender
 
 ## Adding new module
 1. Add entry to module rule specifications file **config/modules.yaml** with module name and list of rule names

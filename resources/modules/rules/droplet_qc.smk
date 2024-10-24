@@ -5,20 +5,21 @@
 ##########################################################################################
 
 scripts_dir = config.get("scripts_dir", "resources/scripts")
+metadata_dir = config.get("metadata_dir", "metadata")
 
 # Define rule
 rule droplet_qc:
+    input: os.path.join(config["output_dir"]["reports"], "cellbender/{sample}.html") if "cellbender" in module_rules else os.path.join(config["output_dir"]["data"], f"merge/{{sample}}/{'filtered' if config.get('pre_filtered', None) else 'raw'}_feature_bc_matrix.h5")
     output: os.path.join(config["output_dir"]["reports"], "droplet_qc/{sample}.html")
     log: os.path.abspath("logs/droplet_qc/{sample}.log")
     threads: 1
     params:
         script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
-        metadata = lambda wildcards: get_hto_metadata(wildcards, info=info),
-        gex_matrix = lambda wildcards: config["gex_matrix"],
-        atac_matrix = lambda wildcards: config.get("atac_matrix", None),
-        adt_matrix = lambda wildcards: config.get("adt_matrix", None),
+        metadata = os.path.join(metadata_dir, config["samples"]) if os.path.isabs(metadata_dir) else os.path.join(workflow.basedir, metadata_dir, config["samples"]),
+        features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules, filtered=config.get("pre_filtered", None)),
         hto_matrix = lambda wildcards: config.get("hto_matrix", None),
-        outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"),
+        hto_prefix = config.get("hto_prefix", None),
+        outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"), # DO NOT CHANGE - downstream rules will search for output files in this directory
         pre_filtered = config.get("pre_filtered", None),
         cell_calling_algorithm = config.get("cell_calling_algorithm", None),
         emptydrops_umi_min = config.get("emptydrops_umi_min", None),
@@ -41,4 +42,4 @@ rule droplet_qc:
     message: "Running droplet processing QC for {wildcards.sample}"
     script: "{params.script_path}/droplet_qc.Rmd"
 
-droplet_qc = expand("{path}/droplet_qc/{sample}.html", path=[config["output_dir"]["reports"]], sample=samples)
+droplet_qc = expand(os.path.join(config["output_dir"]["reports"], "droplet_qc/{sample}.html"), sample=samples)

@@ -1,7 +1,7 @@
 ##########################################################################################
 # Snakemake module
 # Author: Redwan Farooq
-# Module name: qc
+# Module name: cellbender
 ##########################################################################################
 
 
@@ -19,16 +19,18 @@ for key, value in parse_info(info).items():
     globals()[key] = value
 
 # Set module rules list
-module_rules = ['droplet_qc', 'libraries_qc', 'ambient_removal', 'summary']
+module_rules = ['merge', 'cellbender', 'droplet_qc', 'libraries_qc', 'filter_barcodes', 'summary']
 
 # Import rules
+include: 'rules/merge.smk'
+include: 'rules/cellbender.smk'
 include: 'rules/droplet_qc.smk'
 include: 'rules/libraries_qc.smk'
-include: 'rules/ambient_removal.smk'
+include: 'rules/filter_barcodes.smk'
 include: 'rules/summary.smk'
 
 # Set targets list
-targets = [x for rule in [droplet_qc, libraries_qc, ambient_removal, summary] for x in rule]
+targets = [x for rule in [merge, cellbender, droplet_qc, libraries_qc, filter_barcodes, summary] for x in rule]
 # --------------------------------------------------
 
 
