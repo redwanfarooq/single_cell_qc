@@ -15,6 +15,7 @@ git submodule update --remote single_cell_qc
     - [Snakemake >=v7.31](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)
     - [docopt >=v0.6](https://github.com/docopt/docopt)
     - [pandas >=v2.0](https://pandas.pydata.org/docs/getting_started/install.html)
+    - [loguru >=v0.7](https://github.com/Delgan/loguru)
 2. Specific modules
     - [R >=v4.3](https://cran.r-project.org)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)

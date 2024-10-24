@@ -5,6 +5,7 @@
 ##########################################################################################
 
 scripts_dir = config.get("scripts_dir", "resources/scripts")
+metadata_dir = config.get("metadata_dir", "metadata")
 
 # Define rule
 rule droplet_qc:
@@ -14,7 +15,7 @@ rule droplet_qc:
     threads: 1
     params:
         script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
-        metadata = os.path.join(config.get("metadata_dir", "metadata"), config["samples"]),
+        metadata = os.path.join(metadata_dir, config["samples"]) if os.path.isabs(metadata_dir) else os.path.join(workflow.basedir, metadata_dir, config["samples"]),
         features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules, filtered=config.get("pre_filtered", None)),
         hto_matrix = lambda wildcards: config.get("hto_matrix", None),
         hto_prefix = config.get("hto_prefix", None),

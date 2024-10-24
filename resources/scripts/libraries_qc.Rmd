@@ -155,16 +155,16 @@ is.mito <- grep(pattern = "^MT-", ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hs
   suppressWarnings() # pattern matching for mitochondrial genes
 sce <- addPerCellQC(sce, subsets = list(mito = is.mito))
 qc <- data.frame(row.names = colnames(sce))
-if (params$gex_filters$library_size) qc$low_lib_size <- isOutlier(sce$sum, type = "lower", log = TRUE)
-if (params$gex_filters$library_complexity) qc$low_lib_complexity <- isOutlier(sce$detected, type = "lower", log = TRUE)
-if (params$gex_filters$mitochondrial_fraction) qc$high_mito_percent <- isOutlier(sce$subsets_mito_percent, type = "higher", log = FALSE)
+if (as.logical(params$gex_filters$library_size)) qc$low_lib_size <- if (is.logical(params$gex_filters$library_size)) isOutlier(sce$sum, type = "lower", log = TRUE) else sce$sum < params$gex_filters$library_size
+if (as.logical(params$gex_filters$library_complexity)) qc$low_lib_complexity <- if (is.logical(params$gex_filters$library_complexity)) isOutlier(sce$detected, type = "lower", log = TRUE) else sce$detected < params$gex_filters$library_complexity
+if (as.logical(params$gex_filters$mitochondrial_fraction)) qc$high_mito_percent <- if (is.logical(params$gex_filters$mitochondrial_fraction)) isOutlier(sce$subsets_mito_percent, type = "higher", log = FALSE) else sce$subsets_mito_percent > params$gex_filters$mitochondrial_fraction * 100
 qc$discard <- combine.filters(qc)
 sce <- add.cell.metadata(sce, qc)
 bc$gex <- colnames(sce[, !sce$discard])
 summary.stats$GEX <- !qc$discard
 ```
 
-```{r gex-qc-library-size, eval=all(!is.null(features.mat[["Gene Expression"]]), params$gex_filters$library_size)}
+```{r gex-qc-library-size, eval=all(!is.null(features.mat[["Gene Expression"]]), as.logical(params$gex_filters$library_size))}
 cat("### Library size", "\n\n")
 ggplotly(
   violin.plot(
@@ -183,7 +183,7 @@ ggplotly(
 )
 ```
 
-```{r gex-qc-library-complexity, eval=all(!is.null(features.mat[["Gene Expression"]]), params$gex_filters$library_complexity)}
+```{r gex-qc-library-complexity, eval=all(!is.null(features.mat[["Gene Expression"]]), as.logical(params$gex_filters$library_complexity))}
 cat("### Library complexity", "\n\n")
 ggplotly(
   violin.plot(
@@ -202,7 +202,7 @@ ggplotly(
 )
 ```
 
-```{r gex-qc-mitochondrial-fraction, eval=all(!is.null(features.mat[["Gene Expression"]]), params$gex_filters$mitochondrial_fraction)}
+```{r gex-qc-mitochondrial-fraction, eval=all(!is.null(features.mat[["Gene Expression"]]), as.logical(params$gex_filters$mitochondrial_fraction))}
 cat("### Mitochondrial fraction", "\n\n")
 ggplotly(
   violin.plot(
@@ -224,13 +224,13 @@ ggplotly(
 cat("### Diagnostics", "\n\n")
 cat("* **Cells passed:**", length(bc$gex) %>% format(big.mark = ","), "\n")
 cat("* **Cells excluded:**", sum(sce$discard, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-if (params$gex_filters$library_size) {
+if (as.logical(params$gex_filters$library_size)) {
   cat("  + **Low library size:**", sum(sce$low_lib_size, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$gex_filters$library_complexity) {
+if (as.logical(params$gex_filters$library_complexity)) {
   cat("  + **Low library complexity:**", sum(sce$low_lib_complexity, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$gex_filters$mitochondrial_fraction) {
+if (as.logical(params$gex_filters$mitochondrial_fraction)) {
   cat("  + **High mitochondrial fraction:**", sum(sce$high_mito_percent, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
@@ -281,29 +281,29 @@ seu <- CreateSeuratObject(
 ) %>%
   add.cell.metadata(droplet.qc.res)
 qc <- data.frame(row.names = colnames(seu))
-if (params$atac_filters$peak_count) {
+if (as.logical(params$atac_filters$peak_count)) {
   seu$sum <- colSums(seu)
-  qc$low_peak_count <- isOutlier(seu$sum, type = "lower", log = TRUE)
+  qc$low_peak_count <- if (is.logical(params$atac_filters$peak_count)) isOutlier(seu$sum, type = "lower", log = TRUE) else seu$sum < params$atac_filters$peak_count
 }
-if (params$atac_filters$peak_fraction) {
+if (as.logical(params$atac_filters$peak_fraction)) {
   fragments.count <- CountFragments(fragments@path)
   rownames(fragments.count) <- fragments.count$CB
   seu$fragments <- fragments.count[colnames(seu), "frequency_count"]
   seu <- FRiP(seu, assay = "ATAC", total.fragments = "fragments")
   if (any(seu$FRiP > 1)) seu$FRiP <- seu$FRiP / 2 # if any FRiP > 1, assume peak counts represent transposition events rather than fragments and divide by 2 to adjust
-  qc$low_peak_fraction <- seu$FRiP < 0.2 # hard threshold of 0.2 as per ENCODE consortium guidelines
+  qc$low_peak_fraction <- if (is.logical(params$atac_filters$peak_fraction)) isOutlier(seu$FRiP, type = "lower", log = FALSE) else seu$FRiP < params$atac_filters$peak_fraction
 }
-if (params$atac_filters$blacklist_fraction) {
+if (as.logical(params$atac_filters$blacklist_fraction)) {
   seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
-  qc$high_blacklist_fraction <- isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) # only exclude extreme outliers
+  qc$high_blacklist_fraction <- if (is.logical(params$atac_filters$blacklist_fraction)) isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) else seu$blacklist_fraction > params$atac_filters$blacklist_fraction
 }
-if (params$atac_filters$nucleosome_signal) {
+if (as.logical(params$atac_filters$nucleosome_signal)) {
   seu <- NucleosomeSignal(seu)
-  qc$high_nucleosome_signal <- isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 8) # only exclude extreme outliers
+  qc$high_nucleosome_signal <- if (is.logical(params$atac_filters$nucleosome_signal)) isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 8) else seu$nucleosome_signal > params$atac_filters$nucleosome_signal
 }
-if (params$atac_filters$tss_enrichment) {
+if (as.logical(params$atac_filters$tss_enrichment)) {
   seu <- TSSEnrichment(seu, fast = FALSE)
-  qc$low_tss_enrichment <- isOutlier(seu$TSS.enrichment, type = "lower", log = FALSE)
+  qc$low_tss_enrichment <- if (is.logical(params$atac_filters$tss_enrichment)) isOutlier(seu$TSS.enrichment, type = "lower", log = TRUE) else seu$TSS.enrichment < params$atac_filters$tss_enrichment
 }
 qc$discard <- combine.filters(qc)
 seu <- add.cell.metadata(seu, qc)
@@ -311,7 +311,7 @@ bc$atac <- colnames(seu[, !seu$discard])
 summary.stats$ATAC <- !qc$discard
 ```
 
-```{r atac-qc-peak-count, eval=all(!is.null(features.mat[["Peaks"]]), params$atac_filters$peak_count)}
+```{r atac-qc-peak-count, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$peak_count))}
 cat("### Peak count", "\n\n")
 ggplotly(
   violin.plot(
@@ -330,7 +330,7 @@ ggplotly(
 )
 ```
 
-```{r atac-qc-peak-fraction, eval=all(!is.null(features.mat[["Peaks"]]), params$atac_filters$peak_fraction)}
+```{r atac-qc-peak-fraction, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$peak_fraction))}
 cat("### Peak fraction", "\n\n")
 ggplotly(
   violin.plot(
@@ -348,7 +348,7 @@ ggplotly(
 )
 ```
 
-```{r atac-qc-blacklist-fraction, eval=all(!is.null(features.mat[["Peaks"]]), params$atac_filters$blacklist_fraction)}
+```{r atac-qc-blacklist-fraction, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$blacklist_fraction))}
 cat("### Blacklist fraction", "\n\n")
 ggplotly(
   violin.plot(
@@ -366,7 +366,7 @@ ggplotly(
 )
 ```
 
-```{r atac-qc-nucleosome-signal, eval=all(!is.null(features.mat[["Peaks"]]), params$atac_filters$nucleosome_signal)}
+```{r atac-qc-nucleosome-signal, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$nucleosome_signal))}
 cat("### Nucleosome signal", "\n\n")
 ggplotly(
   violin.plot(
@@ -384,7 +384,7 @@ ggplotly(
 )
 ```
 
-```{r atac-qc-tss-enrichment, eval=all(!is.null(features.mat[["Peaks"]]), params$atac_filters$tss_enrichment)}
+```{r atac-qc-tss-enrichment, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$tss_enrichment))}
 cat("### TSS enrichment", "\n\n")
 ggplotly(
   violin.plot(
@@ -395,7 +395,8 @@ ggplotly(
     size = 0.1,
     title = "Low TSS enrichment score",
     x.lab = "Sample",
-    y.lab = "TSS enrichment score"
+    y.lab = "TSS enrichment score",
+    log = TRUE
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
@@ -406,19 +407,19 @@ ggplotly(
 cat("### Diagnostics", "\n\n")
 cat("* **Cells passed:**", length(bc$atac) %>% format(big.mark = ","), "\n")
 cat("* **Cells excluded:**", sum(seu$discard, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-if (params$atac_filters$peak_count) {
+if (as.logical(params$atac_filters$peak_count)) {
   cat("  + **Low total reads in peaks:**", sum(seu$low_peak_count, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$atac_filters$peak_fraction) {
+if (as.logical(params$atac_filters$peak_fraction)) {
   cat("  + **Low fraction reads in peaks:**", sum(seu$low_peak_fraction, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$atac_filters$blacklist_fraction) {
+if (as.logical(params$atac_filters$blacklist_fraction)) {
   cat("  + **High blacklist region reads:**", sum(seu$high_blacklist_fraction, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$atac_filters$nucleosome_signal) {
+if (as.logical(params$atac_filters$nucleosome_signal)) {
   cat("  + **High nucleosome signal:**", sum(seu$high_nucleosome_signal, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (params$atac_filters$tss_enrichment) {
+if (as.logical(params$atac_filters$tss_enrichment)) {
   cat("  + **Low TSS enrichment score:**", sum(seu$low_tss_enrichment, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
@@ -447,13 +448,15 @@ sce <- SingleCellExperiment(assays = list(counts = features.mat[["Antibody Captu
 filters <- NULL
 if (is.null(params$adt_isotype)) {
   qc <- cleanTagCounts(sce)
-  if (params$adt_filters$high_ambient) filters <- "high.ambient"
+  qc$high.ambient <- if (is.logical(params$adt_filters$high_ambient)) isOutlier(qc$ambient.scale, type = "higher", log = TRUE) else qc$ambient.scale > params$adt_filters$high_ambient
+  if (as.logical(params$adt_filters$high_ambient)) filters <- "high.ambient"
 } else {
   is.control <- grep(pattern = params$adt_isotype, rownames(sce))
   qc <- cleanTagCounts(sce, controls = is.control)
-  if (params$adt_filters$high_controls) filters <- "high.controls"
+  qc$high.controls <- if (is.logical(params$adt_filters$high_controls)) isOutlier(qc$sum.controls, type = "higher", log = TRUE) else qc$sum.controls > params$adt_filters$high_controls
+  if (as.logical(params$adt_filters$high_controls)) filters <- "high.controls"
 }
-if (params$adt_filters$zero_ambient) filters <- c(filters, "zero.ambient")
+if (as.logical(params$adt_filters$zero_ambient)) filters <- c(filters, "zero.ambient")
 qc$discard <- if (!is.null(filters)) combine.filters(lapply(filters, function(x) qc[[x]])) else FALSE
 sce <- add.cell.metadata(sce, qc)
 bc$adt <- colnames(sce[, !sce$discard])
@@ -500,13 +503,13 @@ if (is.null(params$adt_isotype)) {
 cat("### Diagnostics", "\n\n")
 cat("* **Cells passed:**", length(bc$adt) %>% format(big.mark = ","), "\n")
 cat("* **Cells excluded:**", sum(sce$discard, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-if (params$adt_filters$zero_ambient) {
+if (as.logical(params$adt_filters$zero_ambient)) {
   cat("  + **Zero ambient contamination:**", sum(sce$zero.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (is.null(params$adt_isotype) && params$adt_filters$high_ambient) {
+if (is.null(params$adt_isotype) && as.logical(params$adt_filters$high_ambient)) {
   cat("  + **High ambient contamination:**", sum(sce$high.ambient, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (!is.null(params$adt_isotype) && params$adt_filters$high_controls) {
+if (!is.null(params$adt_isotype) && as.logical(params$adt_filters$high_controls)) {
   cat("  + **High non-specific binding:**", sum(sce$high.controls, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 ```
