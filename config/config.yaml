@@ -27,18 +27,18 @@ module: default
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/processed/gex_atac/test_02/qc
-  reports: /project/fuggerlab/rfarooq/project/jurkat_multiome/results/reports/gex_atac/test_02/qc
+  data: /project/fuggerlab/rfarooq/project/ms_snp_multiome/data/processed/gex_atac/test_02/qc
+  reports: /project/fuggerlab/rfarooq/project/ms_snp_multiome/results/reports/gex_atac/test_02/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+gex_matrix: /project/fuggerlab/rfarooq/project/ms_snp_multiome/data/raw/gex_atac/test_02/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
-atac_matrix: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
+atac_matrix: /project/fuggerlab/rfarooq/project/ms_snp_multiome/data/raw/gex_atac/test_02/chromap_macs2/{sample}/raw_feature_bc_matrix/matrix.mtx.gz
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /project/fuggerlab/rfarooq/project/jurkat_multiome/data/raw/gex_atac/test_02/qc/count_reads/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/ms_snp_multiome/data/raw/gex_atac/test_02/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -66,9 +66,9 @@ samples: samples.tsv
 # --------------------------------------------------
 # OPTIONAL
 # Global parameters
-adt_prefix: ADT_ # default: ADT_; prefix for ADT features
-adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
-hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
+# adt_prefix: ADT_ # default: ADT_; prefix for ADT features
+# adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
+# hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 # droplet_qc.Rmd
 cell_calling_algorithm: combined # default: emptydrops; options: emptydrops, multimodal, combined; only 'multimodal' is supported if using CellBender
@@ -81,7 +81,7 @@ emptydrops_niters: 10000 # default: 10000
 multimodal_modalities: # default: gex, atac, adt; options: gex, atac, adt
   - gex
   - atac
-  - adt
+  # - adt
 multimodal_ordmag_quantile: 0.99 # default: 0.99
 multimodal_ordmag_ratio: 10 # default: 10
 demuxmix_model: auto # default: auto; options: auto, naive
@@ -103,8 +103,8 @@ atac_filters:
   fragment_count: true # default: true
   tss_enrichment: true # default: true
   nucleosome_signal: true # default: true
-  peak_fraction: true # default: true
-  blacklist_fraction: true # default: true
+  peak_fraction: 0.2 # default: true
+  blacklist_fraction: 0.01 # default: true
 adt_filters:
   zero_ambient: true # default: true; set to false if using CellBender
   high_ambient: true # default: true; set to false if using CellBender
