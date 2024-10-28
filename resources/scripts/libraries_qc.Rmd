@@ -18,7 +18,7 @@ params:
   fragments: null
   adt_isotype: null
   gex_filters: !r list("library_size" = TRUE, "library_complexity" = TRUE, "mitochondrial_fraction" = TRUE)
-  atac_filters: !r list("peak_count" = TRUE, "peak_fraction" = TRUE, "blacklist_fraction" = TRUE, "nucleosome_signal" = TRUE, "tss_enrichment" = TRUE)
+  atac_filters: !r list("fragment_count" = TRUE, "tss_enrichment" = TRUE, "nucleosome_signal" = TRUE, "peak_fraction" = TRUE, "blacklist_fraction" = TRUE)
   adt_filters: !r list("zero_ambient" = TRUE, "high_ambient" = TRUE, "high_controls" = TRUE)
 ---
 
@@ -280,50 +280,74 @@ seu <- CreateSeuratObject(
   assay = "ATAC"
 ) %>%
   add.cell.metadata(droplet.qc.res)
+fragment.metrics <- CountFragments(fragments@path) %>% tibble::column_to_rownames("CB")
+seu$fragment_count <- fragment.metrics[colnames(seu), "frequency_count"]
+seu$nucleosome_signal <- fragment.metrics[colnames(seu), "mononucleosomal"] / fragment.metrics[colnames(seu), "nucleosome_free"]
+seu <- TSSEnrichment(seu, fast = FALSE)
+seu <- FRiP(seu, assay = "ATAC", total.fragments = "fragment_count")
+if (any(seu$FRiP > 1)) seu$FRiP <- seu$FRiP / 2 # if any FRiP > 1, assume peak counts represent transposition events rather than fragments and divide by 2 to adjust
+seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
 qc <- data.frame(row.names = colnames(seu))
-if (as.logical(params$atac_filters$peak_count)) {
-  seu$sum <- colSums(seu)
-  qc$low_peak_count <- if (is.logical(params$atac_filters$peak_count)) isOutlier(seu$sum, type = "lower", log = TRUE) else seu$sum < params$atac_filters$peak_count
-}
-if (as.logical(params$atac_filters$peak_fraction)) {
-  fragments.count <- CountFragments(fragments@path)
-  rownames(fragments.count) <- fragments.count$CB
-  seu$fragments <- fragments.count[colnames(seu), "frequency_count"]
-  seu <- FRiP(seu, assay = "ATAC", total.fragments = "fragments")
-  if (any(seu$FRiP > 1)) seu$FRiP <- seu$FRiP / 2 # if any FRiP > 1, assume peak counts represent transposition events rather than fragments and divide by 2 to adjust
-  qc$low_peak_fraction <- if (is.logical(params$atac_filters$peak_fraction)) isOutlier(seu$FRiP, type = "lower", log = FALSE) else seu$FRiP < params$atac_filters$peak_fraction
-}
-if (as.logical(params$atac_filters$blacklist_fraction)) {
-  seu$blacklist_fraction <- FractionCountsInRegion(seu, regions = blacklist_hg38_unified)
-  qc$high_blacklist_fraction <- if (is.logical(params$atac_filters$blacklist_fraction)) isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) else seu$blacklist_fraction > params$atac_filters$blacklist_fraction
-}
-if (as.logical(params$atac_filters$nucleosome_signal)) {
-  seu <- NucleosomeSignal(seu)
-  qc$high_nucleosome_signal <- if (is.logical(params$atac_filters$nucleosome_signal)) isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 8) else seu$nucleosome_signal > params$atac_filters$nucleosome_signal
-}
-if (as.logical(params$atac_filters$tss_enrichment)) {
-  seu <- TSSEnrichment(seu, fast = FALSE)
-  qc$low_tss_enrichment <- if (is.logical(params$atac_filters$tss_enrichment)) isOutlier(seu$TSS.enrichment, type = "lower", log = TRUE) else seu$TSS.enrichment < params$atac_filters$tss_enrichment
-}
+if (as.logical(params$atac_filters$fragment_count)) qc$low_fragment_count <- if (is.logical(params$atac_filters$fragment_count)) isOutlier(seu$fragment_count, type = "lower", log = TRUE) else seu$fragment_count < params$atac_filters$fragment_count
+if (as.logical(params$atac_filters$tss_enrichment)) qc$low_tss_enrichment <- if (is.logical(params$atac_filters$tss_enrichment)) isOutlier(seu$TSS.enrichment, type = "lower", log = FALSE) else seu$TSS.enrichment < params$atac_filters$tss_enrichment
+if (as.logical(params$atac_filters$nucleosome_signal)) qc$high_nucleosome_signal <- if (is.logical(params$atac_filters$nucleosome_signal)) isOutlier(seu$nucleosome_signal, type = "higher", log = FALSE, nmads = 8) else seu$nucleosome_signal > params$atac_filters$nucleosome_signal
+if (as.logical(params$atac_filters$peak_fraction)) qc$low_peak_fraction <- if (is.logical(params$atac_filters$peak_fraction)) isOutlier(seu$FRiP, type = "lower", log = FALSE, nmads = 8) else seu$FRiP < params$atac_filters$peak_fraction
+if (as.logical(params$atac_filters$blacklist_fraction)) qc$high_blacklist_fraction <- if (is.logical(params$atac_filters$blacklist_fraction)) isOutlier(seu$blacklist_fraction, type = "higher", log = FALSE, nmads = 8) else seu$blacklist_fraction > params$atac_filters$blacklist_fraction
 qc$discard <- combine.filters(qc)
 seu <- add.cell.metadata(seu, qc)
 bc$atac <- colnames(seu[, !seu$discard])
 summary.stats$ATAC <- !qc$discard
 ```
 
-```{r atac-qc-peak-count, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$peak_count))}
-cat("### Peak count", "\n\n")
+```{r atac-qc-fragment-count, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$fragment_count))}
+cat("### Fragment count", "\n\n")
 ggplotly(
   violin.plot(
     seu[[]],
     x = sample_id,
-    y = sum,
-    colour = low_peak_count,
+    y = fragment_count,
+    colour = low_fragment_count,
     size = 0.1,
-    title = "Low total reads in peaks",
+    title = "Low total unique fragments",
     x.lab = "Sample",
-    y.lab = "Total reads in peaks",
+    y.lab = "Total unique fragments",
     log = TRUE
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
+```
+
+```{r atac-qc-tss-enrichment, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$tss_enrichment))}
+cat("### TSS enrichment", "\n\n")
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = sample_id,
+    y = TSS.enrichment,
+    colour = low_tss_enrichment,
+    size = 0.1,
+    title = "Low TSS enrichment score",
+    x.lab = "Sample",
+    y.lab = "TSS enrichment score"
+  ) +
+    scale_colour_manual(values = c("grey80", "#d82526")),
+  tooltip = c("y", "colour")
+)
+```
+
+```{r atac-qc-nucleosome-signal, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$nucleosome_signal))}
+cat("### Nucleosome signal", "\n\n")
+ggplotly(
+  violin.plot(
+    seu[[]],
+    x = sample_id,
+    y = nucleosome_signal,
+    colour = high_nucleosome_signal,
+    size = 0.1,
+    title = "High nucleosome signal",
+    x.lab = "Sample",
+    y.lab = "Nucleosome signal"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
   tooltip = c("y", "colour")
@@ -366,49 +390,18 @@ ggplotly(
 )
 ```
 
-```{r atac-qc-nucleosome-signal, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$nucleosome_signal))}
-cat("### Nucleosome signal", "\n\n")
-ggplotly(
-  violin.plot(
-    seu[[]],
-    x = sample_id,
-    y = nucleosome_signal,
-    colour = high_nucleosome_signal,
-    size = 0.1,
-    title = "High nucleosome signal",
-    x.lab = "Sample",
-    y.lab = "Nucleosome signal"
-  ) +
-    scale_colour_manual(values = c("grey80", "#d82526")),
-  tooltip = c("y", "colour")
-)
-```
-
-```{r atac-qc-tss-enrichment, eval=all(!is.null(features.mat[["Peaks"]]), as.logical(params$atac_filters$tss_enrichment))}
-cat("### TSS enrichment", "\n\n")
-ggplotly(
-  violin.plot(
-    seu[[]],
-    x = sample_id,
-    y = TSS.enrichment,
-    colour = low_tss_enrichment,
-    size = 0.1,
-    title = "Low TSS enrichment score",
-    x.lab = "Sample",
-    y.lab = "TSS enrichment score",
-    log = TRUE
-  ) +
-    scale_colour_manual(values = c("grey80", "#d82526")),
-  tooltip = c("y", "colour")
-)
-```
-
-```{r atac-qc-diagnostics, fig.width=10, fig.height=5, eval=!is.null(features.mat[["Peaks"]])}
+```{r atac-qc-diagnostics, fig.width=7, fig.height=5, eval=!is.null(features.mat[["Peaks"]])}
 cat("### Diagnostics", "\n\n")
 cat("* **Cells passed:**", length(bc$atac) %>% format(big.mark = ","), "\n")
 cat("* **Cells excluded:**", sum(seu$discard, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-if (as.logical(params$atac_filters$peak_count)) {
-  cat("  + **Low total reads in peaks:**", sum(seu$low_peak_count, na.rm = TRUE) %>% format(big.mark = ","), "\n")
+if (as.logical(params$atac_filters$fragment_count)) {
+  cat("  + **Low total unique fragments:**", sum(seu$low_fragment_count, na.rm = TRUE) %>% format(big.mark = ","), "\n")
+}
+if (as.logical(params$atac_filters$tss_enrichment)) {
+  cat("  + **Low TSS enrichment score:**", sum(seu$low_tss_enrichment, na.rm = TRUE) %>% format(big.mark = ","), "\n")
+}
+if (as.logical(params$atac_filters$nucleosome_signal)) {
+  cat("  + **High nucleosome signal:**", sum(seu$high_nucleosome_signal, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 if (as.logical(params$atac_filters$peak_fraction)) {
   cat("  + **Low fraction reads in peaks:**", sum(seu$low_peak_fraction, na.rm = TRUE) %>% format(big.mark = ","), "\n")
@@ -416,24 +409,31 @@ if (as.logical(params$atac_filters$peak_fraction)) {
 if (as.logical(params$atac_filters$blacklist_fraction)) {
   cat("  + **High blacklist region reads:**", sum(seu$high_blacklist_fraction, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
-if (as.logical(params$atac_filters$nucleosome_signal)) {
-  cat("  + **High nucleosome signal:**", sum(seu$high_nucleosome_signal, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-}
-if (as.logical(params$atac_filters$tss_enrichment)) {
-  cat("  + **Low TSS enrichment score:**", sum(seu$low_tss_enrichment, na.rm = TRUE) %>% format(big.mark = ","), "\n")
-}
 cat("\n\n")
-FragmentHistogram(seu, group.by = "high_nucleosome_signal") +
-  labs(title = "Nucleosome banding") +
-  scale_fill_manual(values = c("grey80", "#d82526")) +
+scatter.plot(
+  seu[[]] %>% 
+    arrange(discard),
+  x = fragment_count,
+  y = TSS.enrichment,
+  size = 0.1,
+  colour = discard,
+  title = "Cells excluded",
+  x.lab = "Total unique fragments",
+  y.lab = "TSS enrichment score",
+  log = "x"
+) +
+  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
+cat("\n\n")
+TSSPlot(subset(seu, cells = WhichCells(seu, expression = discard, invert = TRUE))) +
+  scale_colour_manual(values = "#595959") + 
   theme_minimal() +
   theme(
     legend.position = "none",
     strip.text = element_blank()
   )
 cat("\n\n")
-TSSPlot(seu, group.by = "low_tss_enrichment") +
-  scale_colour_manual(values = c("grey80", "#d82526")) +
+FragmentHistogram(seu, cells = WhichCells(seu, expression = discard, invert = TRUE)) +
+  labs(title = "Nucleosome banding") +
   theme_minimal() +
   theme(
     legend.position = "none",
