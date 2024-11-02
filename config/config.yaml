@@ -100,11 +100,11 @@ gex_filters:
   library_complexity: true # default: true
   mitochondrial_fraction: true # default: true
 atac_filters:
-  peak_count: true # default: true
+  fragment_count: true # default: true
+  tss_enrichment: true # default: true
+  nucleosome_signal: true # default: true
   peak_fraction: true # default: true
   blacklist_fraction: true # default: true
-  nucleosome_signal: true # default: true
-  tss_enrichment: true # default: true
 adt_filters:
   zero_ambient: true # default: true; set to false if using CellBender
   high_ambient: true # default: true; set to false if using CellBender
