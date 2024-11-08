@@ -104,7 +104,7 @@ atac_filters:
   tss_enrichment: true # default: true
   nucleosome_signal: true # default: true
   peak_fraction: 0.2 # default: true
-  blacklist_fraction: 0.01 # default: true
+  blacklist_fraction: 0.005 # default: true
 adt_filters:
   zero_ambient: true # default: true; set to false if using CellBender
   high_ambient: true # default: true; set to false if using CellBender
