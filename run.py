@@ -52,7 +52,9 @@ def _main(opt: dict) -> None:
             ) != _get_hash(config, "VERSION", *METADATA):
                 if opt["--clean"]:
                     logger.critical(
-                        f"Removing existing pipeline results in {OUTPUT_DIR}"
+                        "Removing existing pipeline results in {} and {}",
+                        OUTPUT_DIR,
+                        REPORT_DIR,
                     )
                     match str(
                         input("Are you sure you want to continue? (y/N) ")
@@ -64,7 +66,9 @@ def _main(opt: dict) -> None:
                             sys.exit(1)
                 elif opt["--force"]:
                     logger.critical(
-                        f"Overwriting existing pipeline results in {OUTPUT_DIR}"
+                        "Overwriting existing pipeline results in {} and {}",
+                        OUTPUT_DIR,
+                        REPORT_DIR,
                     )
                     match str(
                         input("Are you sure you want to continue? (y/N) ")
@@ -76,7 +80,11 @@ def _main(opt: dict) -> None:
                             sys.exit(1)
                 else:
                     logger.warning(
-                        f"Specified output directory contains results of a previous pipeline run from {_file_to_str(os.path.join(OUTPUT_DIR, '.pipeline', 'timestamp'))} with different version, configuration and/or metadata ({os.path.join(OUTPUT_DIR, '.pipeline')}.\nUse --force to overwrite existing results (if required).\nUse --clean to remove existing results."
+                        "Specified output directory contains results of a previous pipeline run from {} with different version, configuration and/or metadata ({}).\nUse --force to overwrite existing results (if required).\nUse --clean to remove existing results.",
+                        _file_to_str(
+                            os.path.join(OUTPUT_DIR, ".pipeline", "timestamp")
+                        ),
+                        os.path.join(OUTPUT_DIR, ".pipeline"),
                     )
                     sys.exit(0)
         logger.info("Starting pipeline using module {}", MODULE)
@@ -107,7 +115,8 @@ def _main(opt: dict) -> None:
                 dirs_exist_ok=True,
             )
         logger.success(
-            f"Pipeline completed successfully; run information saved to {os.path.join(OUTPUT_DIR, '.pipeline')}"
+            "Pipeline completed successfully; run information saved to {}",
+            os.path.join(OUTPUT_DIR, ".pipeline"),
         )
 
 
@@ -161,11 +170,11 @@ with open(file=CONFIG, mode="r", encoding="UTF-8") as file:
     try:
         INPUT_TABLE = os.path.join(METADATA_DIR, config["samples"])
         OUTPUT_DIR = config["output_dir"]["data"]
+        REPORT_DIR = config["output_dir"]["reports"]
         MODULE = config["module"]
     except KeyError as err:
         raise KeyError(f"{err} not specified in '{file.name}'") from err
 METADATA = [_ for _ in [INPUT_TABLE] if _ is not None]
-
 
 with open(file="config/modules.yaml", mode="r", encoding="UTF-8") as file:
     try:
