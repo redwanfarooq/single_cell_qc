@@ -18,7 +18,7 @@
 #   cellbender (CellBender cell calling/ambient removal)
 #     Additional required configuration:
 #       - 'gex_matrix' (input/output)
-module: 
+module: default
 
 
 # --------------------------------------------------
@@ -80,7 +80,7 @@ emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
 multimodal_modalities: # default: gex, atac, adt; options: gex, atac, adt
   - gex
-  - atac
+  # - atac
   - adt
 multimodal_ordmag_quantile: 0.99 # default: 0.99
 multimodal_ordmag_ratio: 10 # default: 10
@@ -96,8 +96,8 @@ multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
 # If set to 'true', the filter will be applied using automated outlier-based thresholds
 # If set to a numeric threshold, the filter will be applied using the specified threshold
 gex_filters:
-  library_size: false # default: true
-  library_complexity: false # default: true
+  library_size: true # default: true
+  library_complexity: true # default: true
   mitochondrial_fraction: true # default: true
 atac_filters:
   fragment_count: true # default: true
@@ -137,7 +137,7 @@ adt_ambient_removal:
 # summary_report.qmd
 target_depth:
   GEX: 20000 # default: 20000
-  ATAC: 25000 # default: 25000
+  # ATAC: 25000 # default: 25000
   ADT: 10000 # default: 5000
   HTO: 2000 # default: 2000
 
@@ -147,8 +147,8 @@ target_depth:
 # --------------------------------------------------
 # OPTIONAL
 # If not specified, defaults to ''
-cellbender_args: >-
-  --cuda
-  --fpr 0.01
-  --exclude-feature-types Peaks
-  --total-droplets-included 30000
+# cellbender_args: >-
+#   --cuda
+#   --fpr 0.01
+#   --exclude-feature-types Peaks
+#   --total-droplets-included 30000
