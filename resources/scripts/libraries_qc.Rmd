@@ -179,6 +179,8 @@ ggplotly(
     log = TRUE
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -198,6 +200,8 @@ ggplotly(
     log = TRUE
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -216,6 +220,8 @@ ggplotly(
     y.lab = "Percentage mitochondrial genes"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -234,35 +240,47 @@ if (as.logical(params$gex_filters$mitochondrial_fraction)) {
   cat("  + **High mitochondrial fraction:**", sum(sce$high_mito_percent, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
-scatter.plot(
-  colData(sce) %>%
-    as.data.frame() %>%
-    arrange(discard),
-  x = sum,
-  y = subsets_mito_percent,
-  size = 0.1,
-  colour = discard,
-  title = "Cells excluded (library size vs mitochondrial fraction)",
-  x.lab = "Total UMI count",
-  y.lab = "Percentage mitochondrial genes",
-  log = "x"
-) +
-  scale_colour_manual(values = c("grey80", "#d82526"))
+ggplotly(
+  scatter.plot(
+    colData(sce) |>
+      as.data.frame() |>
+      arrange(discard),
+    x = sum,
+    y = subsets_mito_percent,
+    size = 0.1,
+    colour = discard,
+    title = "Cells excluded (library size vs mitochondrial fraction)",
+    x.lab = "Total UMI count",
+    y.lab = "Percentage mitochondrial genes",
+    log = "x"
+  ) +
+    scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480
+) %>%
+  htmltools::tagList() %>%
+  print()
 cat("\n\n")
-scatter.plot(
-  colData(sce) %>%
-    as.data.frame() %>%
-    arrange(discard),
-  x = sum,
-  y = detected,
-  size = 0.1,
-  colour = discard,
-  title = "Cells excluded (library size vs library complexity)",
-  x.lab = "Total UMI count",
-  y.lab = "Total genes detected",
-  log = TRUE
-) +
-  scale_colour_manual(values = c("grey80", "#d82526"))
+ggplotly(
+  scatter.plot(
+    colData(sce) |>
+      as.data.frame() |>
+      arrange(discard),
+    x = sum,
+    y = detected,
+    size = 0.1,
+    colour = discard,
+    title = "Cells excluded (library size vs library complexity)",
+    x.lab = "Total UMI count",
+    y.lab = "Total genes detected",
+    log = TRUE
+  ) +
+    scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480
+) %>%
+  htmltools::tagList() %>%
+  print()
 ```
 
 ```{r atac-qc-metrics, eval=!is.null(features.mat[["Peaks"]])}
@@ -314,6 +332,8 @@ ggplotly(
     log = TRUE
   ) +
     ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -332,6 +352,8 @@ ggplotly(
     y.lab = "TSS enrichment score"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -350,6 +372,8 @@ ggplotly(
     y.lab = "Nucleosome signal"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -368,6 +392,8 @@ ggplotly(
     y.lab = "Percentage reads in peaks"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -386,6 +412,8 @@ ggplotly(
     y.lab = "Percentage reads in genomic blacklist regions"
   ) +
     scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480,
   tooltip = c("y", "colour")
 )
 ```
@@ -410,35 +438,51 @@ if (as.logical(params$atac_filters$blacklist_fraction)) {
   cat("  + **High blacklist region reads:**", sum(seu$high_blacklist_fraction, na.rm = TRUE) %>% format(big.mark = ","), "\n")
 }
 cat("\n\n")
-scatter.plot(
-  seu[[]] %>% 
-    arrange(discard),
-  x = fragment_count,
-  y = TSS.enrichment,
-  size = 0.1,
-  colour = discard,
-  title = "Cells excluded",
-  x.lab = "Total unique fragments",
-  y.lab = "TSS enrichment score",
-  log = "x"
-) +
-  ggplot2::scale_colour_manual(values = c("grey80", "#d82526"))
+ggplotly(
+  scatter.plot(
+    seu[[]] |>
+      arrange(discard),
+    x = fragment_count,
+    y = TSS.enrichment,
+    size = 0.1,
+    colour = discard,
+    title = "Cells excluded",
+    x.lab = "Total unique fragments",
+    y.lab = "TSS enrichment score",
+    log = "x"
+  ) +
+    ggplot2::scale_colour_manual(values = c("grey80", "#d82526")),
+  width = 672,
+  height = 480
+) %>%
+  htmltools::tagList() %>%
+  print()
 cat("\n\n")
-TSSPlot(subset(seu, cells = WhichCells(seu, expression = discard, invert = TRUE))) +
-  scale_colour_manual(values = "#595959") + 
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-    strip.text = element_blank()
-  )
+ggplotly(
+  tss.plot(
+    seu,
+    assay = "ATAC",
+    cells = WhichCells(seu, expression = discard, invert = TRUE),
+    colour = "#595959"
+  ),
+  width = 672,
+  height = 480
+) %>%
+  htmltools::tagList() %>%
+  print()
 cat("\n\n")
-FragmentHistogram(seu, cells = WhichCells(seu, expression = discard, invert = TRUE)) +
-  labs(title = "Nucleosome banding") +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-    strip.text = element_blank()
-  )
+ggplotly(
+  fragments.plot(
+    fragments = fragments,
+    cells = WhichCells(seu, expression = discard, invert = TRUE),
+    colour = "#595959",
+    binwidth = 1
+  ),
+  width = 672,
+  height = 480
+) %>%
+  htmltools::tagList() %>%
+  print()
 ```
 
 ```{r adt-qc-metrics, eval=!is.null(features.mat[["Antibody Capture"]])}
@@ -478,6 +522,8 @@ if (is.null(params$adt_isotype)) {
       y.lab = "Relative ambient contamination"
     ) +
       scale_colour_manual(values = c("grey80", "#d82526")),
+    width = 672,
+    height = 480,
     tooltip = c("y", "colour")
   )
 } else {
@@ -494,6 +540,8 @@ if (is.null(params$adt_isotype)) {
       y.lab = "Total isotype control antibody count"
     ) +
       scale_colour_manual(values = c("grey80", "#d82526")),
+    width = 672,
+    height = 480,
     tooltip = c("y", "colour")
   )
 }

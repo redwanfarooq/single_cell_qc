@@ -18,9 +18,13 @@ git submodule update --remote single_cell_qc
     - [loguru >=v0.7](https://github.com/Delgan/loguru)
 2. Specific modules
     - [R >=v4.3](https://cran.r-project.org)
+        * [docopt v0.7.1](https://CRAN.R-project.org/package=docopt)
+        * [logger v0.3.0](https://CRAN.R-project.org/package=logger)
+        * [hdf5r v1.3.10](https://CRAN.R-project.org/package=hdf5r)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)
         * [cowplot v1.1.2](https://CRAN.R-project.org/package=cowplot)
         * [plotly v4.10.4](https://CRAN.R-project.org/package=plotly)
+        * [metap v1.4](https://CRAN.R-project.org/package=metap)
         * [Seurat v5.0.0](https://CRAN.R-project.org/package=Seurat)
         * [Signac v1.12.0](https://CRAN.R-project.org/package=Signac)
         * [Bioconductor v3.18](https://www.bioconductor.org/install/)
@@ -32,6 +36,7 @@ git submodule update --remote single_cell_qc
             + scDblFinder
             + decontX
     - [CellBender >=v0.3.0](https://github.com/broadinstitute/CellBender)
+    - [sccomposite >=v1.0.0](https://github.com/CHPGenetics/COMPOSITE)
 
 # Setup
 1. Install software for global environment (requires Anaconda or Miniconda - see [installation instructions](https://conda.io/projects/conda/en/stable/user-guide/install/index.html))
