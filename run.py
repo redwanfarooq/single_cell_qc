@@ -10,6 +10,7 @@ Runs single cell data QC pipeline.
 # MODULES
 # ==============================
 import os
+import glob
 import sys
 import shutil
 import hashlib
@@ -115,6 +116,9 @@ def _main(opt: dict) -> None:
                 dst=os.path.join(OUTPUT_DIR, ".pipeline", "logs"),
                 dirs_exist_ok=True,
             )
+        # Clean up cluster logs
+        if glob.glob("sps-*"):
+            os.system("rm -r sps-*")
         logger.success(
             "Pipeline completed successfully; run information saved to {}",
             os.path.join(OUTPUT_DIR, ".pipeline"),
