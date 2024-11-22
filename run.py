@@ -61,6 +61,7 @@ def _main(opt: dict) -> None:
                     ).lower():
                         case "y" | "yes":
                             shutil.rmtree(OUTPUT_DIR)
+                            shutil.rmtree(REPORT_DIR)
                         case _:
                             logger.error("Pipeline aborted")
                             sys.exit(1)
