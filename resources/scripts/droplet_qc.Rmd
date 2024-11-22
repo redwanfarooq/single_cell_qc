@@ -164,6 +164,7 @@ wl <- md$hto
 ```{r load-features-matrix}
 cat("* **Features matrix:**", params$features_matrix, "\n")
 features.mat <- get.10x.h5(params$features_matrix)
+if (!is.list(features.mat)) features.mat <- list(features.mat) # convert to list if only one modality is present
 bc$features <- colnames(features.mat[[1]])
 ```
 
@@ -208,12 +209,16 @@ total.counts <- mapply(
   mat = features.mat,
   type = modalities,
   SIMPLIFY = FALSE
-) %>%
-  Reduce(
-    x = .,
+)
+if (length(total.counts) > 1) {
+  total.counts <- Reduce(
+    x = total.counts,
     f = function(x, y) full_join(x, y, by = "barcode")
-  ) %>%
-  filter(if_all(everything(), function(x) !is.na(x)))
+  )
+} else {
+  total.counts <- total.counts[[1]]
+}
+total.counts <- filter(total.counts, if_all(everything(), function(x) !is.na(x)))
 
 cells <- list()
 empty <- list()
@@ -266,7 +271,7 @@ if (params$cell_calling_algorithm == "combined") {
   bc$features <- cells[[1]]
   bc.empty <- empty[[1]]
 }
-bc.cells <- Reduce(intersect, bc)
+bc.cells <- if (!is.null(bc$hto)) intersect(bc$features, bc$hto) else bc$features
 cc.stats$cells <- length(bc.cells)
 cc.stats$empty <- length(bc.empty)
 

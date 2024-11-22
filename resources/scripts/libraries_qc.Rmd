@@ -132,6 +132,7 @@ bc$cells <- rownames(droplet.qc.res)
 ```{r load-features-matrix, eval=!is.null(params$features_matrix)}
 cat("* **Features matrix:**", params$features_matrix, "\n")
 features.mat <- get.10x.h5(params$features_matrix)
+if (!is.list(features.mat)) features.mat <- list(features.mat) # convert to list if only one modality is present
 bc$features <- colnames(features.mat[[1]])
 ```
 
