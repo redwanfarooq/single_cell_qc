@@ -69,7 +69,7 @@ pre_filtered: false # default: false; set to true if input matrices are pre-filt
 # droplet_qc.Rmd
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
 cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
-  - gex
+  # - gex
   - atac
   # - adt
 ordmag_quantile: 0.99 # default: 0.99
@@ -84,11 +84,11 @@ emptydrops_max_attempts: 3 # default: 3
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
 multiplet_calling_algorithm: composite # default: null; options: scdblfinder, composite, combined
-scdblfinder_clusters: true # default: true
-scdblfinder_dbr_sd: null # default: null
-scdblfinder_nfeatures: 1500 # default: 1500
-scdblfinder_npcs: 20 # default: 20
-scdblfinder_max_depth: 5 # default: 5
+# scdblfinder_clusters: true # default: true
+# scdblfinder_dbr_sd: null # default: null
+# scdblfinder_nfeatures: 1500 # default: 1500
+# scdblfinder_npcs: 20 # default: 20
+# scdblfinder_max_depth: 5 # default: 5
 # libraries_qc.Rmd
 # Each filter can be specified as 'false', 'true' or a numeric threshold
 # If set to 'false', the filter will be skipped
@@ -125,7 +125,7 @@ adt_ambient_removal:
   cluster_markers: null # default: null; list of cluster marker ADT IDs (without prefix) for diagnostic plots
 # summary_report.qmd
 target_depth:
-  GEX: 20000 # default: 20000
+  # GEX: 20000 # default: 20000
   ATAC: 25000 # default: 25000
   # ADT: 5000 # default: 5000
   # HTO: 2000 # default: 2000
