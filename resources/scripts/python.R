@@ -36,7 +36,7 @@ run.composite <- function(...,
   x <- list(...)
   if (length(x) == 0) stop("Invalid input: no count matrices provided")
   if (!all(sapply(x, function(x) is(x, "sparseMatrix")))) stop("Invalid input: all count matrices must be sparse matrices")
-  if (!Reduce(identical, lapply(x, colnames))) stop("Invalid input: all count matrices must have the same cell barcodes")
+  if (length(x) > 1 && !Reduce(identical, lapply(x, colnames))) stop("Invalid input: all count matrices must have the same cell barcodes")
   names(x) <- sapply(names(x), function(x) match.arg(tolower(x), choices = c("gex", "atac", "adt")))
   if (any(is.null(names(x)))) stop("Invalid count matrix type(s): '...' arguments must be named 'gex', 'atac', or 'adt'")
   if ("atac" %in% names(x) && is.null(fragments)) stop("Invalid input: 'fragments' must be provided with ATAC count matrix")
