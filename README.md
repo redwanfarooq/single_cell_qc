@@ -22,7 +22,6 @@ git submodule update --remote single_cell_qc
         * [logger v0.3.0](https://CRAN.R-project.org/package=logger)
         * [hdf5r v1.3.10](https://CRAN.R-project.org/package=hdf5r)
         * [tidyverse v2.0.0](https://CRAN.R-project.org/package=tidyverse)
-        * [cowplot v1.1.2](https://CRAN.R-project.org/package=cowplot)
         * [plotly v4.10.4](https://CRAN.R-project.org/package=plotly)
         * [metap v1.4](https://CRAN.R-project.org/package=metap)
         * [Seurat v5.0.0](https://CRAN.R-project.org/package=Seurat)
