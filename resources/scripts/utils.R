@@ -99,7 +99,11 @@ prepend.index <- function(x) {
 #' If not specified, will use 'matrix' for v3 and the only group for v2.
 #'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
-#' as column names.
+#' as column names, named with feature type (if present). If feature type not specified
+#' and multiple types are present returns a named list of sparse matrices (one per feature
+#' type detected).
+#'
+#' @importFrom hdf5r H5File existsGroup
 #'
 #' @export
 get.10x.h5 <- function(file,
@@ -155,15 +159,20 @@ get.10x.h5 <- function(file,
     feature.type <- infile[["matrix/features/feature_type"]]
     if (!is.null(type)) {
       matrix <- matrix[feature.type[] %in% type, ]
+      names(matrix) <- type
     } else {
-      if (length(unique(feature.type[])) > 1) message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ". Returning list of matrices; please specify 'type' parameter to return a single matrix.")
-      matrix <- lapply(
-        unique(feature.type[]),
-        function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
-        matrix = matrix,
-        feature.type = feature.type[]
-      ) |>
-        setNames(unique(feature.type[]))
+      if (length(unique(feature.type[])) > 1) {
+        message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ". Returning list of matrices; please specify 'type' parameter to return a single matrix.")
+        matrix <- lapply(
+          unique(feature.type[]),
+          function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
+          matrix = matrix,
+          feature.type = feature.type[]
+        ) |>
+          setNames(unique(feature.type[]))
+      } else {
+        names(matrix) <- unique(feature.type[])
+      }
     }
 
     return(matrix)
@@ -185,6 +194,8 @@ get.10x.h5 <- function(file,
 #'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
 #'  as column names.
+#'
+#' @importFrom Matrix readMM
 #'
 #' @export
 get.10x.matrix <- function(file,
@@ -218,6 +229,8 @@ get.10x.matrix <- function(file,
 #' @returns A data frame with the following columns:
 #'  * Barcode: cell barcode
 #'
+#' @importFrom vroom vroom
+#'
 #' @export
 get.10x.barcodes <- function(file, remove.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
@@ -249,6 +262,8 @@ get.10x.barcodes <- function(file, remove.suffix = FALSE) {
 #'  * Chr: chromosome
 #'  * Start: genomic start position
 #'  * End: genomic end position
+#'
+#' @importFrom vroom vroom
 #'
 #' @export
 get.10x.features <- function(file, type = NULL) {
@@ -333,6 +348,8 @@ get.barcounter.matrix <- function(file,
 #'
 #' @returns An object of the same class as `x` with updated cell metadata.
 #'
+#' @importFrom SummarizedExperiment colData
+#'
 #' @export
 add.cell.metadata <- function(x,
                               metadata,
@@ -379,6 +396,9 @@ add.cell.metadata <- function(x,
 #'  object). If not provided, will use `DefaultAssay(x)`.
 #'
 #' @returns An object of the same class as `x` with updated feature metadata.
+#'
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom SeuratObject DefaultAssay
 #'
 #' @export
 add.feature.metadata <- function(x,
@@ -476,6 +496,9 @@ estimate.expected.cells <- function(counts) {
 #' @param verbose Logical scalar (default `TRUE`). Print progress messages.
 #'
 #' @returns Character vector of cell-containing barcodes.
+#'
+#' @importFrom dplyr filter everything select distinct mutate if_else if_all group_by summarise across starts_with arrange case_match left_join pull
+#' @importFrom tibble rownames_to_column column_to_rownames
 #'
 #' @export
 kmeans.cell.caller <- function(matrix.list,
@@ -779,6 +802,8 @@ emptydrops.multimodal <- function(matrix.list,
 #'
 #' @returns Logical vector.
 #'
+#' @importFrom magrittr or
+#'
 #' @export
 combine.filters <- function(filters, missing = FALSE) {
   if ((!is.list(filters) || !is.data.frame(filters)) && !all(sapply(filters, is.logical))) stop("filters must be a list of logical vectors")
@@ -809,6 +834,9 @@ combine.filters <- function(filters, missing = FALSE) {
 #'  * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
+#'
+#' @importFrom ggplot2 ggplot aes geom_point labs theme_minimal scale_x_log10 scale_y_log10
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 scatter.plot <- function(data,
@@ -847,6 +875,10 @@ scatter.plot <- function(data,
 #' @param points Logical scalar (default `TRUE`). Add beeswarm points.
 #'
 #' @returns Plot object.
+#'
+#' @importFrom ggplot2 ggplot aes geom_violin labs theme_minimal scale_y_log10
+#' @importFrom ggbeeswarm geom_quasirandom
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 violin.plot <- function(data,
@@ -887,22 +919,42 @@ violin.plot <- function(data,
 #'
 #' @param data Data frame or object coercible to data frame.
 #' @param x Column in `data` to determine x position.
+#' @param y Function to determine y position after [ggplot2::stat_bin()]; see [ggplot2::after_stat()].
+#' @param fill Column in `data` to determine fill.
 #' @param ... Fixed aesthetics to pass to [ggplot2::geom_histogram()].
 #' @param title Character scalar specifying plot title.
 #' @param x.lab Character scalar specifying x-axis label.
+#' @param y.lab Character scalar specifying y-axis label.
+#' @param fill.lab Character scalar specifying fill legend label.
+#' @param log Log-transform axis scales:
+#' * `TRUE` to transform all axes
+#' * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
+#'
+#' @importFrom ggplot2 ggplot geom_histogram labs theme_minimal scale_x_log10 scale_y_log10 after_stat
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 hist.plot <- function(data,
                       x,
+                      y = ggplot2::after_stat(count),
+                      fill,
                       ...,
                       title = NULL,
-                      x.lab = NULL) {
-  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }})) +
-    ggplot2::geom_histogram(...) +
-    ggplot2::labs(title = title, x = x.lab) +
+                      x.lab = NULL,
+                      y.lab = NULL,
+                      fill.lab = NULL,
+                      log = FALSE) {
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, fill = {{ fill }})) +
+    ggplot2::geom_histogram(position = "identity", ...) +
+    ggplot2::labs(title = title, x = x.lab, y = y.lab, fill = fill.lab) +
     ggplot2::theme_minimal()
+  if (!is.null(log)) {
+    if (is.logical(log) && log) log <- c("x", "y")
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+  }
 
   return(plot)
 }
@@ -924,6 +976,10 @@ hist.plot <- function(data,
 #'  * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
+#'
+#' @importFrom dplyr group_by summarise n
+#' @importFrom ggplot2 ggplot geom_col scale_y_discrete labs theme_minimal scale_x_log10
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 bar.plot <- function(data,
@@ -987,26 +1043,36 @@ bcrank.plot <- function(bcrank.res, cells, ...) {
 }
 
 
-#' Generate Monte Carlo p-value histogram for background barcodes
+#' Generate feature log-counts histogram plots
 #'
-#' Makes a histogram of computed p-values for droplets with UMI count less than
-#' `lower` parameter used for [DropletUtils::emptyDrops()] (requires parameter
-#' `test.ambient = TRUE`).
+#' Makes log-counts histogram plots for selected features.
 #'
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
-#' @param ... Arguments to pass to [hist.plot()].
+#' @param matrix Matrix or matrix-like object containing counts with
+#'  features as row names.
+#' @param features.pattern Character vector of regular expressions to select
+#'  features for plotting.
+#' #' @param ... Arguments to pass to [hist.plot()].
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr bind_cols everything
+#' @importFrom tidyr pivot_longer
+#'
 #' @export
-pvalue.plot <- function(ed.res, ...) {
-  data <- ed.res %>%
+logcounts.histplot <- function(matrix,
+                               features.pattern = "^[a-zA-Z]+_",
+                               ...) {
+  data <- matrix[grepl(pattern = features.pattern, x = rownames(matrix)), ] %>%
+    as.matrix() %>%
+    t() %>%
     as.data.frame() %>%
-    dplyr::filter(Total <= metadata(ed.res)$lower & Total > 0)
+    tidyr::pivot_longer(cols = dplyr::everything(), names_to = "Feature", values_to = "count")
 
   plot <- hist.plot(
-    data,
-    x = PValue,
+    data = data,
+    x = count,
+    fill = Feature,
+    log = "x",
     ...
   )
 
@@ -1014,7 +1080,7 @@ pvalue.plot <- function(ed.res, ...) {
 }
 
 
-#' Generate feature log-counts distribution plots
+#' Generate feature log-counts ridge plots
 #'
 #' Makes log-counts distribution plots for selected features, optionally
 #' grouping by sample.
@@ -1037,22 +1103,27 @@ pvalue.plot <- function(ed.res, ...) {
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr bind_cols mutate across everything
+#' @importFrom tidyr pivot_longer
+#' @importFrom ggplot2 aes geom_density_ridges scale_y_discrete xlim labs theme_minimal theme
+#' @importFrom ggridges geom_density_ridges
+#'
 #' @export
-logcounts.plot <- function(matrix,
-                           ...,
-                           features.pattern = "^[a-zA-Z]+_",
-                           pseudocount = 1,
-                           x.lower = 0.3,
-                           x.upper = max(log10(matrix + pseudocount)),
-                           samples = NULL,
-                           title = NULL) {
+logcounts.ridgeplot <- function(matrix,
+                                ...,
+                                features.pattern = "^[a-zA-Z]+_",
+                                pseudocount = 1,
+                                x.lower = 0.3,
+                                x.upper = max(log10(matrix + pseudocount)),
+                                samples = NULL,
+                                title = NULL) {
   data <- matrix %>%
     as.matrix() %>%
     t() %>%
     as.data.frame() %>%
-    dplyr::mutate(across(everything(), ~ log10(.x + pseudocount)))
+    dplyr::mutate(dplyr::across(dplyr::everything(), ~ log10(.x + pseudocount)))
   if (!is.null(samples)) data <- dplyr::bind_cols(data, Sample = samples)
-  data <- tidyr::pivot_longer(data, cols = matches(features.pattern), names_to = "Feature", values_to = "count")
+  data <- tidyr::pivot_longer(data, cols = dplyr::matches(features.pattern), names_to = "Feature", values_to = "count")
 
   plot <- ggplot2::ggplot(data = data)
   if (is.null(samples)) {
@@ -1072,6 +1143,67 @@ logcounts.plot <- function(matrix,
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(strip.text = ggplot2::element_text(hjust = 0))
+
+  return(plot)
+}
+
+
+#' Generate demultiplexing scatter biplots
+#'
+#' Makes scatter biplots of log-counts for selected features, coloured by demultiplexing classification.
+#'
+#' @param matrix Matrix or matrix-like object containing counts with
+#' features as row names.
+#' @param demux.res Data frame containing demultiplexing results with cell barcodes as row names and
+#' columns 'HTO' (containing HTO assignment; comma-separated if multiple) and 'Classification' (containing
+#' final classification).
+#' @param feature.1 Character scalar specifying first feature to plot.
+#' @param feature.2 Character scalar specifying second feature to plot.
+#' @param ... Fixed aesthetics to pass to [scatter.plot()].
+#'
+#' @returns Plot object.
+#'
+#' @importFrom dplyr arrange bind_cols
+#' @importFrom stringr str_split
+#' @importFrom rlang sym
+#'
+#' @export
+demux.plot <- function(matrix,
+                       demux.res,
+                       feature.1,
+                       feature.2,
+                       ...) {
+  data <- matrix[c(feature.1, feature.2), ] %>%
+    as.matrix() %>%
+    t() %>%
+    as.data.frame() %>%
+    dplyr::bind_cols(demux.res)
+  keep <- sapply(
+    stringr::str_split(demux.res$HTO, ","),
+    function(x) {
+      if (length(x) == 1) {
+        out <- any(c(feature.1, feature.2, "negative", "uncertain") %in% x)
+      } else {
+        out <- all(c(feature.1, feature.2) %in% x)
+      }
+      return(out)
+    }
+  )
+  data <- data[keep, ] %>%
+    dplyr::arrange(Classification)
+
+  plot <- scatter.plot(
+    data = data,
+    x = !!rlang::sym(feature.1),
+    y = !!rlang::sym(feature.2),
+    colour = Classification,
+    title = paste(feature.1, "vs", feature.2),
+    x.lab = paste(feature.1, "UMI counts"),
+    y.lab = paste(feature.2, "UMI counts"),
+    colour.lab = "Classification",
+    log = TRUE,
+    ...
+  )
 
   return(plot)
 }
@@ -1156,6 +1288,8 @@ multiplet.plot <- function(x,
 #' @importFrom tibble rownames_to_column
 #' @importFrom dplyr mutate
 #' @importFrom ggplot2 ggplot aes geom_line labs theme_minimal
+#'
+#' @export
 tss.plot <- function(x,
                      assay = NULL,
                      cells = NULL,

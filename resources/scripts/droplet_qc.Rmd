@@ -371,19 +371,23 @@ dmm <- if ("gex" %in% names(features.mat)) {
 models <- lapply(dmm@models, function(x) class(x))
 demux.res <- dmm %>%
   dmmClassify() %>%
-  mutate(HTO = if_else(grepl(",", HTO), "multiplet", HTO))
+  mutate(Classification = if_else(grepl(",", HTO), "multiplet", HTO))
 demux.stats <- demux.res %>%
   as.data.frame() %>%
-  group_by(HTO) %>%
+  group_by(Classification) %>%
   summarise(count = n())
 demux.stats <- demux.stats$count %>%
   as.list() %>%
-  setNames(demux.stats$HTO)
+  setNames(demux.stats$Classification)
 demux.stats$singlet <- sum(demux.res$Type == "singlet")
 bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
   rownames()
 features.mat <- lapply(features.mat, function(x) x[, bc.cells])
+cols <- sapply(seq_along(wl), function(x) scales::brewer_pal(palette = "Greens", direction = -1)(length(wl))[x]) %>% setNames(wl)
+cols["multiplet"] <- "#d82526"
+cols["negative"] <- "lightgrey"
+cols["uncertain"] <- "#ffc156"
 ```
 
 ```{r hto-demultiplexing-classification, eval=!is.null(params$hto_matrix)}
@@ -406,36 +410,42 @@ ggplotly(
 )
 ```
 
-```{r hto-demultiplexing-raw-counts, eval=!is.null(params$hto_matrix), fig.width=7, fig.height=length(wl)}
+```{r hto-demultiplexing-raw-counts, eval=!is.null(params$hto_matrix)}
 cat("### Raw HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  scale = 0.95,
-  colour = NA,
-  fill = "#595959",
-  title = "Raw HTO counts"
+ggplotly(
+  logcounts.plot(
+    matrix = hto.mat,
+    features.pattern = "^HTO_",
+    title = "Histogram of HTO counts",
+    x.lab = "UMI count",
+    fill.lab = "HTO",
+    binwidth = 0.05,
+    alpha = 0.75
+  ) +
+    scale_fill_manual(values = cols),
+  width = 672,
+  height = 480,
+  tooltip = "fill"
 )
 ```
 
-```{r hto-demultiplexing-demux-counts, eval=!is.null(params$hto_matrix), fig.width=7, fig.height=3*ceiling(length(wl)/2)}
-cat("### Demultiplexed HTO counts", "\n\n")
-logcounts.plot(
-  hto.mat,
-  samples = demux.res$HTO,
-  scale = 0.95,
-  colour = NA,
-  show.legend = FALSE,
-  title = "Demultiplexed HTO counts"
-)
-```
-
-```{r hto-demultiplexing-mixture-components, eval=!is.null(params$hto_matrix), fig.width=7, fig.height=2.5}
-cat("### Mixture components", "\n\n")
-for (x in wl) {
-  plot <- plotDmmHistogram(dmm, hto = x) +
-    labs(title = x, x = "UMI count") +
-    theme_minimal()
-  print(plot)
+```{r hto-cross-sensitivities, eval=!is.null(params$hto_matrix)}
+cat("### Cross-sensitivities", "\n\n")
+for (comb in combn(wl, 2, FUN = c, simplify = FALSE)) {
+  plot <- ggplotly(
+    demux.plot(
+      matrix = hto.mat,
+      demux.res = demux.res,
+      feature.1 = comb[1],
+      feature.2 = comb[2],
+      size = 0.1
+    ) +
+      scale_colour_manual(values = cols),
+    width = 672,
+    height = 480
+  )
+  print(htmltools::tagList(plot))
+  cat("\n\n")
 }
 ```
 
@@ -444,7 +454,7 @@ cat("### Diagnostics", "\n\n")
 cat("* **Mode:**", params$demuxmix_model, "\n")
 cat("* **Chosen model:**", "\n")
 cat(sprintf("  + **%s:** %s", wl, models[wl]) %>% paste(collapse = "\n"), "\n")
-cat("* **Acceptance probability:**", params$demuxmix_pAcpt^length(wl) %>% round(2), paste0("(", params$demuxmix_pAcpt %>% round(2), " per HTO)"), "\n")
+cat("* **Posterior probability threshold:**", round(params$demuxmix_pAcpt^length(wl), 2), paste0(" (", round(params$demuxmix_pAcpt, 2), " per HTO)"), "\n")
 cat("* **Fraction overlap between mixture components:**", "\n")
 cat(sprintf("  + **%s:** %s", wl, round(dmmOverlap(dmm)[wl], 3)) %>% paste(collapse = "\n"), "\n")
 ```
@@ -599,7 +609,7 @@ metadata <- data.frame(
   barcode = bc.cells,
   sample_id = params$sample_id
 )
-metadata$hash_id <- if (exists("demux.res")) sapply(demux.res[metadata$barcode, ]$HTO, function(x) md[md$hto == x, "hash_id", drop = TRUE]) else md[1, "hash_id", drop = TRUE]
+metadata$hash_id <- if (exists("demux.res")) sapply(demux.res[metadata$barcode, ]$Classification, function(x) md[md$hto == x, "hash_id", drop = TRUE]) else md[1, "hash_id", drop = TRUE]
 metadata <- left_join(metadata, md %>% select(-c(hto, cells_loaded)) %>% distinct(), by = c("sample_id", "hash_id"))
 if (length(unique(metadata$hash_id)) == 1) metadata$hash_id <- NULL # remove hash_id column if all values are the same (i.e. no cell hashing)
 
