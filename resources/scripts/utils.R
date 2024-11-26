@@ -99,9 +99,8 @@ prepend.index <- function(x) {
 #' If not specified, will use 'matrix' for v3 and the only group for v2.
 #'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
-#' as column names, named with feature type (if present). If feature type not specified
-#' and multiple types are present returns a named list of sparse matrices (one per feature
-#' type detected).
+#' as column names. If feature type not specified returns a named list of sparse matrices
+#' (one per feature type detected).
 #'
 #' @importFrom hdf5r H5File existsGroup
 #'
@@ -159,20 +158,16 @@ get.10x.h5 <- function(file,
     feature.type <- infile[["matrix/features/feature_type"]]
     if (!is.null(type)) {
       matrix <- matrix[feature.type[] %in% type, ]
-      names(matrix) <- type
     } else {
-      if (length(unique(feature.type[])) > 1) {
-        message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ". Returning list of matrices; please specify 'type' parameter to return a single matrix.")
-        matrix <- lapply(
-          unique(feature.type[]),
-          function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
-          matrix = matrix,
-          feature.type = feature.type[]
-        ) |>
-          setNames(unique(feature.type[]))
-      } else {
-        names(matrix) <- unique(feature.type[])
-      }
+      if (length(unique(feature.type[])) > 1) message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ".")
+      message("Returning list of matrices; please specify 'type' parameter to return a single matrix.")
+      matrix <- lapply(
+        unique(feature.type[]),
+        function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
+        matrix = matrix,
+        feature.type = feature.type[]
+      ) |>
+        setNames(unique(feature.type[]))
     }
 
     return(matrix)
@@ -858,8 +853,8 @@ scatter.plot <- function(data,
     ggplot2::theme_minimal()
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- c("x", "y")
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
   }
 
   return(plot)
@@ -906,7 +901,7 @@ violin.plot <- function(data,
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- "y"
     if ("x" %in% log) stop("Unable to log transform categorical x-axis scale")
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
   }
 
   return(plot)
@@ -952,8 +947,8 @@ hist.plot <- function(data,
     ggplot2::theme_minimal()
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- c("x", "y")
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
   }
 
   return(plot)
@@ -1002,7 +997,7 @@ bar.plot <- function(data,
     ggplot2::theme_minimal()
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- "x"
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
     if ("y" %in% log) stop("Unable to log transform categorical y-axis scale")
   }
 
@@ -1154,9 +1149,8 @@ logcounts.ridgeplot <- function(matrix,
 #'
 #' @param matrix Matrix or matrix-like object containing counts with
 #' features as row names.
-#' @param demux.res Data frame containing demultiplexing results with cell barcodes as row names and
-#' columns 'HTO' (containing HTO assignment; comma-separated if multiple) and 'Classification' (containing
-#' final classification).
+#' @param res A data frame with one row per cell barcode and character columns 'HTO' and 'Classification'
+#' indicating HTO assignment(s) (comma-separated if multiple) and final classification respectively.
 #' @param feature.1 Character scalar specifying first feature to plot.
 #' @param feature.2 Character scalar specifying second feature to plot.
 #' @param ... Fixed aesthetics to pass to [scatter.plot()].
@@ -1169,17 +1163,17 @@ logcounts.ridgeplot <- function(matrix,
 #'
 #' @export
 demux.plot <- function(matrix,
-                       demux.res,
+                       res,
                        feature.1,
                        feature.2,
                        ...) {
-  data <- matrix[c(feature.1, feature.2), ] %>%
+  data <- matrix %>%
     as.matrix() %>%
     t() %>%
     as.data.frame() %>%
-    dplyr::bind_cols(demux.res)
+    dplyr::bind_cols(res)
   keep <- sapply(
-    stringr::str_split(demux.res$HTO, ","),
+    stringr::str_split(res$HTO, ","),
     function(x) {
       if (length(x) == 1) {
         out <- any(c(feature.1, feature.2, "negative", "uncertain") %in% x)
@@ -1197,9 +1191,8 @@ demux.plot <- function(matrix,
     x = !!rlang::sym(feature.1),
     y = !!rlang::sym(feature.2),
     colour = Classification,
-    title = paste(feature.1, "vs", feature.2),
-    x.lab = paste(feature.1, "UMI counts"),
-    y.lab = paste(feature.2, "UMI counts"),
+    x.lab = paste(feature.1, "UMI count"),
+    y.lab = paste(feature.2, "UMI count"),
     colour.lab = "Classification",
     log = TRUE,
     ...
@@ -1263,7 +1256,7 @@ multiplet.plot <- function(x,
   plot <- ggplot2::ggplot(data = SeuratObject::FetchData(x, vars = c("umap_1", "umap_2", "Type")), mapping = ggplot2::aes(x = umap_1, y = umap_2, colour = Type)) +
     ggplot2::geom_point(...) +
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
-    ggplot2::labs(title = "Multiplets", x = "UMAP1", y = "UMAP2") +
+    ggplot2::labs(title = "Multiplet assignment", x = "UMAP1", y = "UMAP2") +
     ggplot2::theme_minimal()
 
   return(plot)
@@ -1315,7 +1308,7 @@ tss.plot <- function(x,
     dplyr::mutate(distance = as.integer(distance))
   plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = distance, y = mean.enrichment)) +
     ggplot2::geom_line(...) +
-    ggplot2::labs(title = "TSS enrichment", x = "Distance from TSS (bp)", y = "Mean enrichment") +
+    ggplot2::labs(title = "Tn5 insertion frequency", x = "Distance from TSS (bp)", y = "Relative frequency") +
     ggplot2::theme_minimal()
 
   return(plot)

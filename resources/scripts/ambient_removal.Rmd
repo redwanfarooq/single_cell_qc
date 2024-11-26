@@ -148,6 +148,7 @@ if (file.exists(file.path(params$droplet_qc, "empty_droplet_barcodes.txt.gz"))) 
 ```{r load-features-matrix}
 cat("* **Features matrix:**", params$features_matrix, "\n")
 features.mat <- get.10x.h5(params$features_matrix, cells = cells)
+if (is.null(names(features.mat))) stop("Unable to determine feature type(s) from features matrix")
 # Add ATAC counts to output without any further processing
 counts <- lapply(
   counts,

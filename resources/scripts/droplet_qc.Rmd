@@ -164,8 +164,20 @@ wl <- md$hto
 ```{r load-features-matrix}
 cat("* **Features matrix:**", params$features_matrix, "\n")
 features.mat <- get.10x.h5(params$features_matrix)
-if (!is.list(features.mat)) features.mat <- list(features.mat) # convert to list if only one modality is present
+if (is.null(names(features.mat))) stop("Unable to determine feature type(s) from features matrix")
 bc$features <- colnames(features.mat[[1]])
+# translate 10x feature types
+modalities <- names(features.mat) %>%
+  case_match(
+    "Gene Expression" ~ "gex",
+    "Peaks" ~ "atac",
+    "Antibody Capture" ~ "adt",
+    .default = NA
+  )
+names(features.mat) <- modalities
+# drop unrecognized feature types
+modalities <- modalities[!is.na(modalities)]
+if (!length(modalities)) stop("No valid feature types found in features matrix")
 ```
 
 ```{r load-hto-matrix, eval=!is.null(params$hto_matrix)}
@@ -193,13 +205,6 @@ features.mat <- lapply(features.mat, function(x) x[, bc.cells])
 
 ```{r cell-calling, eval=!params$pre_filtered}
 cat("## Cell calling {.tabset}", "\n\n")
-modalities <- names(features.mat) %>%
-  case_match(
-    "Gene Expression" ~ "gex",
-    "Peaks" ~ "atac",
-    "Antibody Capture" ~ "adt"
-  )
-names(features.mat) <- modalities
 total.counts <- mapply(
   function(mat, type) {
     data.frame(colSums(mat)) %>%
@@ -280,16 +285,17 @@ features.mat <- lapply(features.mat, function(x) x[, bc.cells])
 ```
 
 ```{r cell-calling-classification, eval=!params$pre_filtered}
-cat("### Classification", "\n\n")
+cat("### Classification {.tabset .tabset-pills}", "\n\n")
 cat("* **Cell-containing droplets:**", cc.stats$cells %>% format(big.mark = ","), "\n")
 cat("* **Empty droplets:**", cc.stats$empty %>% format(big.mark = ","), "\n")
 cat("\n\n")
 for (modality in modalities[modalities %in% params$cell_calling_modalities]) {
+  cat("####", toupper(modality), "\n\n")
   plot <- ggplotly(
     bcrank.plot(
       bcrank.res[[modality]],
       cells = bc.cells,
-      title = paste(toupper(modality), "barcode rank plot"),
+      title = "Barcode rank plot",
       x.lab = "Rank",
       y.lab = paste(toupper(modality), if_else(modality == "atac", "peak read", "UMI"), "count"),
       colour.lab = "Fraction cells",
@@ -305,8 +311,9 @@ for (modality in modalities[modalities %in% params$cell_calling_modalities]) {
 ```
 
 ```{r cell-calling-cross-sensitivities, eval=all(!params$pre_filtered, length(features.mat) > 1)}
-cat("### Cross-sensitivities", "\n\n")
+cat("### Cross-sensitivities {.tabset .tabset-pills}", "\n\n")
 for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
+  cat("####", toupper(comb[1]), "vs", toupper(comb[2]), "\n\n")
   plot <- ggplotly(
     scatter.plot(
       data = total.counts %>%
@@ -318,9 +325,10 @@ for (comb in combn(modalities, 2, FUN = c, simplify = FALSE)) {
       y = !!sym(comb[2]),
       colour = type,
       size = 0.1,
-      title = paste(toupper(comb[1]), "vs", toupper(comb[2]), sep = " "),
+      title = "Cell assignment",
       x.lab = paste(toupper(comb[1]), if_else(comb[1] == "atac", "peak read", "UMI"), "count", sep = " "),
       y.lab = paste(toupper(comb[2]), if_else(comb[2] == "atac", "peak read", "UMI"), "count", sep = " "),
+      colour.lab = "Type",
       log = TRUE
     ) +
       scale_colour_manual(values = list(Cell = "#69b764", Empty = "lightgrey")),
@@ -398,12 +406,13 @@ ggplotly(
   bar.plot(
     data = demux.res %>% mutate(Type = factor(Type, levels = c("singlet", "multiplet", "negative", "uncertain"))),
     pos = Type,
-    fill = HTO,
+    fill = Classification,
     position = position_stack(reverse = TRUE),
     title = "HTO assignment",
     pos.lab = "Type",
-    fill.lab = "HTO"
-  ),
+    fill.lab = "Classification"
+  ) +
+    scale_fill_manual(values = cols),
   width = 672,
   height = 480,
   tooltip = c("fill", "x")
@@ -413,10 +422,10 @@ ggplotly(
 ```{r hto-demultiplexing-raw-counts, eval=!is.null(params$hto_matrix)}
 cat("### Raw HTO counts", "\n\n")
 ggplotly(
-  logcounts.plot(
-    matrix = hto.mat,
+  logcounts.histplot(
+    hto.mat,
     features.pattern = "^HTO_",
-    title = "Histogram of HTO counts",
+    title = "HTO count distribution",
     x.lab = "UMI count",
     fill.lab = "HTO",
     binwidth = 0.05,
@@ -430,15 +439,17 @@ ggplotly(
 ```
 
 ```{r hto-cross-sensitivities, eval=!is.null(params$hto_matrix)}
-cat("### Cross-sensitivities", "\n\n")
+cat("### Cross-sensitivities {.tabset .tabset-pills}", "\n\n")
 for (comb in combn(wl, 2, FUN = c, simplify = FALSE)) {
+  cat("####", comb[1], "vs", comb[2], "\n\n")
   plot <- ggplotly(
     demux.plot(
-      matrix = hto.mat,
-      demux.res = demux.res,
+      hto.mat,
+      demux.res,
       feature.1 = comb[1],
       feature.2 = comb[2],
-      size = 0.1
+      title = "HTO assignment",
+      size = 0.5
     ) +
       scale_colour_manual(values = cols),
     width = 672,
