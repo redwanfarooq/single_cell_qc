@@ -23,18 +23,18 @@ module: cellbender
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/cite_seq/cohort_01/cellbender/qc
-  reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/cite_seq/cohort_01/cellbender/qc
+  data: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/processed/cite_seq/cohort_02/cellbender/qc
+  reports: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/results/reports/cite_seq/cohort_02/cellbender/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
-hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
+gex_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_02/starsolo/{sample}/Solo.out/GeneFull_Ex50pAS/raw/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_02/barcounter/{sample}/{sample}_Tag_Counts.csv
 # atac_matrix: /path/to/file.ext
-adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/barcounter/{sample}/{sample}_Tag_Counts.csv
+adt_matrix: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_02/barcounter/{sample}/{sample}_Tag_Counts.csv
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_01/qc/count_reads/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/ocrelizumab_multiome/data/raw/cite_seq/cohort_02/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -83,7 +83,7 @@ emptydrops_niters: 10000 # default: 10000
 emptydrops_max_attempts: 3 # default: 3
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_calling_algorithm: combined # default: null; options: scdblfinder, composite, combined
+multiplet_calling_algorithm: scdblfinder # default: null; options: scdblfinder, composite, combined
 scdblfinder_clusters: true # default: true
 scdblfinder_dbr_sd: null # default: null
 scdblfinder_nfeatures: 1500 # default: 1500
