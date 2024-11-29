@@ -83,8 +83,8 @@ emptydrops_niters: 10000 # default: 10000
 emptydrops_max_attempts: 3 # default: 3
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_calling_algorithm: composite # default: null; options: scdblfinder, composite, combined
-scdblfinder_clusters: true # default: true
+multiplet_calling_algorithm: scdblfinder # default: null; options: scdblfinder, composite, combined
+scdblfinder_clusters: false # default: true
 scdblfinder_dbr_sd: null # default: null
 scdblfinder_nfeatures: 1500 # default: 1500
 scdblfinder_npcs: 20 # default: 20
