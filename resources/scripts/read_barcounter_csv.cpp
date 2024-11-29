@@ -23,8 +23,8 @@ List read_barcounter_csv(string file) {
 
   // initialise vectors to store barcodes, row indices, values, and column pointers
   vector<string> barcodes;
-  vector<int> i, x;
-  vector<int> p = {0};
+  vector<long> i, x;
+  vector<long> p = {0};
 
   // read remaining lines and extract barcodes, row indices, values, and column pointers
   while (getline(infile, line)) {
@@ -35,7 +35,7 @@ List read_barcounter_csv(string file) {
     barcodes.emplace_back(barcode);
 
     // read values
-    vector<int> y;
+    vector<long> y;
     string val;
     while(getline(iss, val, ',')) {
       y.emplace_back(stoi(val));
