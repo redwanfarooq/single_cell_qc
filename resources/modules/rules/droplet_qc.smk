@@ -14,6 +14,7 @@ rule droplet_qc:
     log: os.path.abspath("logs/droplet_qc/{sample}.log")
     threads: 1
     resources:
+        partition = "gpu" if config.get("multiplet_calling_algorithm", None) in {"composite", "combined"} else "short",
         gpus = 1 if config.get("multiplet_calling_algorithm", None) in {"composite", "combined"} else 0,
     params:
         script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),

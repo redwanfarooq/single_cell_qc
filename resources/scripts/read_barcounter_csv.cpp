@@ -13,6 +13,9 @@ List read_barcounter_csv(string file) {
   ifstream infile(file);
   string line;
   getline(infile, line);
+
+  line.erase(remove(line.begin(), line.end(), '\r'), line.end()); // remove carriage return characters
+
   istringstream iss(line);
   string feature;
   vector<string> features;
