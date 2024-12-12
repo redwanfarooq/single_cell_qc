@@ -1095,6 +1095,8 @@ logcounts.histplot <- function(matrix,
 #' @param samples Character vector of the same length as number of
 #'  cells specifying sample of origin. If specified, will group by sample.
 #' @param title Character scalar specifying plot title.
+#' @param x.lab Character scalar specifying x-axis label.
+#' @param y.lab Character scalar specifying y-axis label.
 #'
 #' @returns Plot object.
 #'
@@ -1111,14 +1113,16 @@ logcounts.ridgeplot <- function(matrix,
                                 x.lower = 0.3,
                                 x.upper = max(log10(matrix + pseudocount)),
                                 samples = NULL,
-                                title = NULL) {
+                                title = NULL,
+                                x.lab = sprintf("log10(UMI count + %d)", pseudocount),
+                                y.lab = ifelse(is.null(samples), "Feature", "Sample")) {
   data <- matrix %>%
     as.matrix() %>%
     t() %>%
     as.data.frame() %>%
     dplyr::mutate(dplyr::across(dplyr::everything(), ~ log10(.x + pseudocount)))
   if (!is.null(samples)) data <- dplyr::bind_cols(data, Sample = samples)
-  data <- tidyr::pivot_longer(data, cols = dplyr::matches(features.pattern), names_to = "Feature", values_to = "count")
+  data <- tidyr::pivot_longer(data, cols = dplyr::matches(features.pattern) & !dplyr::matches("^Sample$"), names_to = "Feature", values_to = "count")
 
   plot <- ggplot2::ggplot(data = data)
   if (is.null(samples)) {
@@ -1133,8 +1137,8 @@ logcounts.ridgeplot <- function(matrix,
     ggplot2::xlim(x.lower, x.upper) +
     ggplot2::labs(
       title = title,
-      x = sprintf("log10(UMI count + %d)", pseudocount),
-      y = ifelse(is.null(samples), "Feature", "Sample")
+      x = x.lab,
+      y = y.lab
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(strip.text = ggplot2::element_text(hjust = 0))
