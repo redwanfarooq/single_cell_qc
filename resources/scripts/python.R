@@ -22,7 +22,9 @@ reticulate::source_python("run_composite.py")
 #' @param tmpdir A character string specifying the directory to write temporary files. Default is `tempdir()`.
 #' @param verbose A logical value indicating whether to print progress messages. Default is `TRUE`.
 #'
-#' @return A list of results.
+#' @return A data frame with the following columns:
+#' - `classification`: A character vector indicating the classification of each cell barcode as either "singlet" or "multiplet".
+#' - `probability`: A numeric vector indicating the posterior probability of each cell barcode being a multiplet.
 #'
 #' @importFrom reticulate import
 #' @importFrom Matrix writeMM
@@ -54,7 +56,7 @@ run.composite <- function(...,
   # COMPOSITE does not work well with ATAC peak count matrix so convert to gene activity matrix
   if ("ATAC" %in% names(x)) {
     if (verbose) message("Computing gene activity matrix for ATAC")
-    annotation <- Signac::GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86) %>% suppressWarnings()
+    annotation <- Signac::GetGRangesFromEnsDb(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86) |> suppressWarnings()
     GenomeInfoDb::seqlevelsStyle(annotation) <- "UCSC"
     GenomeInfoDb::genome(annotation) <- "hg38"
     obj <- SeuratObject::CreateSeuratObject(
@@ -83,13 +85,14 @@ run.composite <- function(...,
   if (verbose) message("Running COMPOSITE with the following modalities: ", paste(names(x), collapse = ", "))
   x$file <- tempfile(tmpdir = tmpdir, fileext = ".tsv")
   # run COMPOSITE and parse stdout to extract goodness-of-fit scores for each modality
-  res <- reticulate::py_capture_output(do.call(run_composite, x)) %>%
-    stringr::str_split_1(pattern = "\n") %>%
-    stringr::str_match(pattern = "The (?<modality>[A-Z]+) modality goodness-of-fit score is: (?<score>[0-9.]+)") %>%
+  res <- do.call(run_composite, x) |>
+    reticulate::py_capture_output() |>
+    stringr::str_split_1(pattern = "\n") |>
+    stringr::str_match(pattern = "The (?<modality>[A-Z]+) modality goodness-of-fit score is: (?<score>[0-9.]+)") |>
     na.omit()
   scores <- as.numeric(x = res[, "score"]) %>% setNames(res[, "modality"])
 
-  out <- read.delim(x$file, sep = "\t", header = FALSE, row.names = barcodes, col.names = c("classification", "probability")) %>%
+  out <- read.delim(x$file, sep = "\t", header = FALSE, row.names = barcodes, col.names = c("classification", "probability")) |>
     dplyr::mutate(classification = ifelse(classification == 1, "multiplet", "singlet"))
   attr(out, "scores") <- scores
 
