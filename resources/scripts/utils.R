@@ -3,78 +3,16 @@
 # ==============================
 
 
-# Explicitly define pipe operator
+require(Rcpp)
+
+
+# Explicitly define pipe and set if null operator
 `%>%` <- magrittr::`%>%`
+`%||%` <- rlang::`%||%`
 
 
 # C++ function for efficiently reading BarCounter CSV file to sparse matrix
-Rcpp::sourceCpp(
-  code = r"(
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <Rcpp.h>
-
-using namespace std;
-using namespace Rcpp;
-
-// [[Rcpp::export]]
-List read_barcounter_csv(string file) {
-  // read header line and extract feature names
-  ifstream infile(file);
-  string line;
-  getline(infile, line);
-  istringstream iss(line);
-  string feature;
-  vector<string> features;
-  while(getline(iss, feature, ',')) {
-    features.emplace_back(feature);
-  }
-  features.erase(features.begin()); // remove barcode column header
-
-  // initialise vectors to store barcodes, row indices, values, and column pointers
-  vector<string> barcodes;
-  vector<int> i, x;
-  vector<int> p = {0};
-
-  // read remaining lines and extract barcodes, row indices, values, and column pointers
-  while (getline(infile, line)) {
-    // extract barcode
-    istringstream iss(line);
-    string barcode;
-    getline(iss, barcode, ',');
-    barcodes.emplace_back(barcode);
-
-    // read values
-    vector<int> y;
-    string val;
-    while(getline(iss, val, ',')) {
-      y.emplace_back(stoi(val));
-    }
-
-    // extract row indices and values for non-zero entries
-    for (size_t j = 0; j < y.size(); ++j) {
-      if (y[j] > 0) {
-        i.emplace_back(j);
-        x.emplace_back(y[j]);
-      }
-    }
-
-    // set next column pointer
-    p.emplace_back(i.size());
-  }
-
-  return List::create(
-    Named("i") = i,
-    Named("p") = p,
-    Named("x") = x,
-    Named("features") = features,
-    Named("barcodes") = barcodes
-  );
-}
-)"
-)
+Rcpp::sourceCpp("read_barcounter_csv.cpp")
 
 
 #' Modified implementation of CellRanger OrdMag algorithm
@@ -133,9 +71,8 @@ update.params <- function(user, default = params) {
 #' running count of the index (automatically incremented with each call).
 #'
 #' @param x Character scalar specifying list item.
-#' @param i Integer scalar specifying index.
 #'
-#' @returns A character scalar of `x` prepended with `i`.
+#' @returns A character scalar of `x` prepended with an index.
 #'
 #' @export
 prepend.index <- function(x) {
@@ -147,9 +84,9 @@ prepend.index <- function(x) {
 
 
 #' Get 10x count matrix
-#' 
+#'
 #' Loads 10x count matrix (in HDF5 format).
-#' 
+#'
 #' @param file Path to file.
 #' @param version Character scalar. 10x HDF5 version ('auto', 'v2', or 'v3').
 #' @param cells Character vector. If specified, will subset to matching cell
@@ -160,9 +97,12 @@ prepend.index <- function(x) {
 #' appended to cell barcodes by Cell Ranger.
 #' @param group Optional character scalar. Group name in HDF5 file containing count matrix.
 #' If not specified, will use 'matrix' for v3 and the only group for v2.
-#' 
+#'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
-#' as column names.
+#' as column names. If feature type not specified returns a named list of sparse matrices
+#' (one per feature type detected).
+#'
+#' @importFrom hdf5r H5File existsGroup
 #'
 #' @export
 get.10x.h5 <- function(file,
@@ -219,7 +159,8 @@ get.10x.h5 <- function(file,
     if (!is.null(type)) {
       matrix <- matrix[feature.type[] %in% type, ]
     } else {
-      if (length(unique(feature.type[])) > 1) message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ". Returning list of matrices; please specify 'type' parameter to return a single matrix.")
+      if (length(unique(feature.type[])) > 1) message("Multiple feature types detected: ", paste(unique(feature.type[]), collapse = ", "), ".")
+      message("Returning list of matrices; please specify 'type' parameter to return a single matrix.")
       matrix <- lapply(
         unique(feature.type[]),
         function(type, matrix, feature.type) matrix[grep(pattern = type, x = feature.type), ],
@@ -248,6 +189,8 @@ get.10x.h5 <- function(file,
 #'
 #' @returns A sparse matrix of counts with features as row names and cell barcodes
 #'  as column names.
+#'
+#' @importFrom Matrix readMM
 #'
 #' @export
 get.10x.matrix <- function(file,
@@ -281,6 +224,8 @@ get.10x.matrix <- function(file,
 #' @returns A data frame with the following columns:
 #'  * Barcode: cell barcode
 #'
+#' @importFrom vroom vroom
+#'
 #' @export
 get.10x.barcodes <- function(file, remove.suffix = FALSE) {
   if (!file.exists(file)) stop(file, " does not exist")
@@ -312,6 +257,8 @@ get.10x.barcodes <- function(file, remove.suffix = FALSE) {
 #'  * Chr: chromosome
 #'  * Start: genomic start position
 #'  * End: genomic end position
+#'
+#' @importFrom vroom vroom
 #'
 #' @export
 get.10x.features <- function(file, type = NULL) {
@@ -396,6 +343,8 @@ get.barcounter.matrix <- function(file,
 #'
 #' @returns An object of the same class as `x` with updated cell metadata.
 #'
+#' @importFrom SummarizedExperiment colData
+#'
 #' @export
 add.cell.metadata <- function(x,
                               metadata,
@@ -442,6 +391,9 @@ add.cell.metadata <- function(x,
 #'  object). If not provided, will use `DefaultAssay(x)`.
 #'
 #' @returns An object of the same class as `x` with updated feature metadata.
+#'
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom SeuratObject DefaultAssay
 #'
 #' @export
 add.feature.metadata <- function(x,
@@ -512,7 +464,7 @@ estimate.expected.cells <- function(counts) {
 }
 
 
-#' Multimodal cell calling algorithm
+#' k-means cell calling algorithm
 #'
 #' @description
 #' Modified implementation of CellRanger ARC cell calling algorithm.
@@ -528,24 +480,34 @@ estimate.expected.cells <- function(counts) {
 #' 6. Project barcode labels from deduplicated set to full set
 #'
 #' Key differences from CellRanger ARC implementation are:
-#' * Lack of initial pre-filtering steps
+#' * Lack of initial ATAC prefiltering steps
 #' * Generalisation to more than 2 modalities
 #'
 #' @param matrix.list List of raw count matrices.
 #' @param n.expected.cells Integer scalar. Targeted cell recovery.
 #' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for OrdMag function.
 #' @param ordmag.ratio Numeric scalar (default 10). Ratio used for OrdMag function.
+#' @param seed Integer scalar (default 100). Random seed.
+#' @param verbose Logical scalar (default `TRUE`). Print progress messages.
 #'
 #' @returns Character vector of cell-containing barcodes.
 #'
+#' @importFrom dplyr filter everything select distinct mutate if_else if_all group_by summarise across starts_with arrange case_match left_join pull
+#' @importFrom tibble rownames_to_column column_to_rownames
+#'
 #' @export
-multimodal.cell.caller <- function(matrix.list,
-                                   n.expected.cells,
-                                   ordmag.quantile = 0.99,
-                                   ordmag.ratio = 10) {
+kmeans.cell.caller <- function(matrix.list,
+                               n.expected.cells,
+                               ordmag.quantile = 0.99,
+                               ordmag.ratio = 10,
+                               seed = 100,
+                               verbose = TRUE) {
   if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
-  if (length(matrix.list) < 2) stop("'matrix.list' must contain at least 2 matrices")
   if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
+
+  if (verbose) message("Running k-means cell calling algorithm using ", paste(toupper(names(matrix.list)), collapse = ", "))
+
+  set.seed(as.integer(seed))
 
   matrix.list <- lapply(matrix.list, function(x) x[, colSums(x) > 0])
 
@@ -560,7 +522,8 @@ multimodal.cell.caller <- function(matrix.list,
   ) %>%
     Reduce(
       x = .,
-      f = function(x, y) dplyr::full_join(x, y, by = "barcode")
+      f = function(x, y) dplyr::full_join(x, y, by = "barcode"),
+      init = data.frame(barcode = rownames(matrix.list[[1]]))
     ) %>%
     dplyr::filter(dplyr::if_all(dplyr::everything(), function(x) !is.na(x)))
 
@@ -607,6 +570,221 @@ multimodal.cell.caller <- function(matrix.list,
 }
 
 
+#' Wrapper function to run EmptyDrops algorithm on a single modality
+#'
+#' @param x Raw count matrix.
+#' @param modality Character scalar. Modality name.
+#' @param n.expected.cells Integer scalar. Targeted cell recovery.
+#' @param lower Integer scalar. Upperbound of total counts for barcodes to use for estimating ambient profile.
+#' @param ignore Integer scalar. Upperbound of total counts for barcodes to consider as non-empty droplets.
+#' @param niters Integer scalar (default 10000). Number of Monte Carlo iterations.
+#' @param seed Integer scalar (default 100). Random seed.
+#' @param verbose Logical scalar (default `TRUE`). Print progress messages.
+#' @param ... Additional arguments passed to `DropletUtils::testEmptyDrops`.
+#'
+#' @returns Data frame with columns:
+#' * PValue: p-value for each barcode.
+#' * FDR: false discovery rate for each barcode.
+#' * Limited: logical vector indicating whether p-values are limited by the number of Monte Carlo
+#' iterations.
+#'
+#' @importFrom DropletUtils testEmptyDrops
+#'
+#' @export
+.emptydrops <- function(x,
+                        modality,
+                        lower,
+                        ignore,
+                        niters = 10000,
+                        seed = 100,
+                        verbose = TRUE,
+                        ...) {
+  if (verbose) message("Running EmptyDrops on ", toupper(modality), " with ", niters, " iterations")
+  set.seed(as.integer(seed))
+  res <- DropletUtils::testEmptyDrops(
+    x,
+    lower = lower,
+    ignore = ignore,
+    niters = niters,
+    ...
+  )
+  res$FDR <- p.adjust(res$PValue, method = "BH")
+  rownames(res) <- colnames(x)
+  return(res)
+}
+
+
+#' Multimodal EmptyDrops cell calling algorithm
+#'
+#' @description
+#' Modified implementation of CellRanger variant of EmptyDrops cell calling algorithm for multimodal
+#' data.
+#'
+#' Algorithm steps:
+#' 1. Prefilter barcodes with high total counts for ALL modalities using OrdMag-derived thresholds
+#' based on the number of expected cells (these are considered to definitely be cell-containing)
+#' 2. Determine 'lower' and 'ignore' thresholds for each modality based on user-defined parameters
+#' `ind.min`, `umi.min`, `umi.min.frac.median` and `cand.max.n`
+#' 3. Run EmptyDrops on each modality separately, excluding prefiltered barcodes and barcodes with ranks
+#' higher than the upperbound rank used for estimating the ambient profiles `ind.max` (the latter are
+#' considered to only contain counts due to index hopped reads and therefore are not used for estimating
+#' the ambient profile)
+#' 4. Check if p-values for any modality are limited by the number of Monte Carlo iterations
+#' and rerun EmptyDrops with an increased number of iterations if necessary
+#' 5. Add default values for p-values and FDRs for barcodes excluded from EmptyDrops
+#' 6. Combine p-values across modalities using Fisher method
+#' 7. Adjust combined p-values using Benjamini-Hochberg method
+#'
+#' @param matrix.list List of raw count matrices.
+#' @param n.expected.cells Integer scalar. Targeted cell recovery.
+#' @param ordmag.quantile Numeric scalar (default 0.99). Quantile used for OrdMag function.
+#' @param ordmag.ratio Numeric scalar (default 10). Ratio used for OrdMag function.
+#' @param umi.min Integer scalar (default 500). Minimum UMI count per barcode.
+#' @param umi.min.frac.median Numeric scalar (default 0.01). Minimum fraction of median UMI count
+#' per barcode.
+#' @param ind.min Integer scalar (default 45000). Lowerbound rank of barcodes to use for estimating
+#' ambient profile.
+#' @param ind.max Integer scalar (default 90000). Upperbound rank of barcodes to use for estimating
+#' ambient profile.
+#' @param cand.max.n Integer scalar (default 20000). Maximum number of barcodes to consider as
+#' potentially cell-containing.
+#' @param niters Integer scalar (default 10000). Number of Monte Carlo iterations.
+#' @param max.attempts Integer scalar (default 3). Maximum number of attempts to rerun EmptyDrops if
+#' p-values are limited.
+#' @param seed Integer scalar (default 100). Random seed.
+#' @param verbose Logical scalar (default `TRUE`). Print progress messages.
+#' @param ... Additional arguments passed to `DropletUtils::testEmptyDrops`.
+#'
+#' @returns Data frame with columns:
+#' * PValue.modality: p-value for each modality.
+#' * FDR.modality: false discovery rate for each modality.
+#' * PValue: combined p-value.
+#' * FDR: combined false discovery rate.
+#' Additionally, the data frame has an attribute 'limited' which is a logical vector indicating
+#' whether p-values for each modality are limited.
+#'
+#' @importFrom dplyr if_else if_any starts_with mutate select
+#'
+#' @export
+emptydrops.multimodal <- function(matrix.list,
+                                  n.expected.cells,
+                                  ordmag.quantile = 0.99,
+                                  ordmag.ratio = 10,
+                                  umi.min = 500,
+                                  umi.min.frac.median = 0.01,
+                                  cand.max.n = 20000,
+                                  ind.min = 45000,
+                                  ind.max = 90000,
+                                  niters = 10000,
+                                  max.attempts = 3,
+                                  seed = 100,
+                                  verbose = TRUE,
+                                  ...) {
+  if (!is.list(matrix.list)) stop("'matrix.list' must be a list")
+  if (is.null(names(matrix.list))) names(matrix.list) <- as.character(seq_along(matrix.list))
+
+  # store original barcode order
+  barcodes <- colnames(matrix.list[[1]])
+
+  # prefilter barcodes with high counts in all modalities which are high likely to be cells
+  # regardless of whether their feature profile differs significantly from the ambient profile
+  totals <- lapply(matrix.list, Matrix::colSums)
+  prefiltered <- lapply(
+    totals,
+    function(total, n.expected.cells) {
+      threshold <- .ordmag(
+        x = sort(log10(total), decreasing = TRUE)[seq_len(n.expected.cells)],
+        q = ordmag.quantile,
+        r = ordmag.ratio
+      )
+      return(names(total)[log10(total) >= threshold])
+    },
+    n.expected.cells = n.expected.cells
+  ) %>%
+    Reduce(intersect, ., init = barcodes)
+
+  # rank barcodes by total counts and determine for each modality:
+  # - lower: the count threshold below which barcodes are used to estimate the ambient profile
+  # - ignore: the count threshold below which barcodes are not considered as potentially cell-containing
+  # (but not necessarily used to estimate the ambient profile)
+  # - exclude: the count threshold below which barcodes are assumed to only contain index hopped reads
+  ranked <- lapply(totals, sort, decreasing = TRUE)
+  lower <- lapply(ranked, `[`, ind.min)
+  ignore <- lapply(ranked, function(ranked) {
+    max(umi.min, round(umi.min.frac.median * median(ranked[prefiltered])), ranked[cand.max.n])
+  })
+  exclude <- lapply(ranked, function(ranked) {
+    names(ranked[seq.int(from = ind.max, to = length(ranked))])
+  })
+  # remove prefiltered and excluded barcodes from count matrices prior to running EmptyDrops
+  filtered <- mapply(function(x, exclude) {
+    x[, !colnames(x) %in% c(exclude, prefiltered)]
+  }, x = matrix.list, exclude = exclude, SIMPLIFY = FALSE)
+
+  # initialise results lists
+  ed.res <- vector("list", length(filtered)) %>% setNames(names(filtered))
+  is.limited <- rep(TRUE, length(filtered)) %>% setNames(names(filtered))
+  attempt <- 1
+  # run EmptyDrops on each modality which increasing number of iterations until all modalities are
+  # no longer limited or maximum number of attempts is reached
+  while (any(is.limited) && attempt <= max.attempts) {
+    if (attempt > 1 && verbose) message("The following modalities require more iterations: ", paste(toupper(names(ed.res)[is.limited]), collapse = ", "))
+    ed.res[is.limited] <- mapply(
+      .emptydrops,
+      x = filtered[is.limited],
+      modality = names(filtered[is.limited]),
+      lower = lower[is.limited],
+      ignore = ignore[is.limited],
+      MoreArgs = list(niters = attempt * niters, seed = seed, verbose = verbose, ...),
+      SIMPLIFY = FALSE
+    )
+    is.limited <- sapply(ed.res, function(x) any(x$Limited[which(x$FDR >= 0.001)]))
+    attempt <- attempt + 1
+  }
+  if (any(is.limited)) message("Some modalities are still limited; consider increasing 'niters' and/or 'max.attempts'.")
+
+  # add default values for prefiltered and excluded barcodes to results
+  # all barcodes in this set are assigned PValue = NA (not used in EmptyDrops)
+  # prefiltered barcodes are assigned FDR = 0 (definitely cell-containing)
+  # excluded barcodes are assigned FDR = NA (definitely not cell-containing)
+  default.res <- lapply(
+    exclude,
+    function(exclude, prefiltered) {
+      data.frame(
+        PValue = rep(NA, length(c(exclude, prefiltered))),
+        FDR = c(rep(NA, length(exclude)), rep(0, length(prefiltered))),
+        row.names = c(exclude, prefiltered)
+      )
+    },
+    prefiltered = prefiltered
+  )
+  res <- mapply(function(x, y) {
+    df <- rbind(x[c("PValue", "FDR")], y[c("PValue", "FDR")])
+    return(df[barcodes, ]) # return results in original barcode order
+  }, x = ed.res, y = default.res, SIMPLIFY = FALSE)
+
+  if (verbose && length(res) > 1) message("Aggregating results across modalities")
+  # combine PValue and FDR from each modality and aggregate results
+  pvalue <- lapply(res, `[[`, "PValue") %>%
+    setNames(paste("PValue", names(.), sep = ".")) %>%
+    as.data.frame()
+  fdr <- lapply(res, `[[`, "FDR") %>%
+    setNames(paste("FDR", names(.), sep = ".")) %>%
+    as.data.frame()
+  out <- cbind(pvalue, fdr) %>%
+    dplyr::mutate(
+      PValue = apply(dplyr::select(., dplyr::starts_with("PValue.")), MARGIN = 1, FUN = function(x) ifelse(any(is.na(x)), NA, ifelse(length(x) > 1, metap::sumlog(x)$p, x))),
+      FDR = p.adjust(PValue, method = "BH")
+    ) %>%
+    dplyr::mutate(
+      FDR = dplyr::if_else(dplyr::if_any(dplyr::starts_with("FDR."), function(x) x == 0), 0, FDR)
+    )
+  # store limited flag for each modality as a data frame attribute
+  attr(out, "limited") <- is.limited
+  return(out)
+}
+
+
 #' Combine results of multiple QC filters
 #'
 #' Takes a list or data frame of QC filtering results (logical vectors with
@@ -618,6 +796,8 @@ multimodal.cell.caller <- function(matrix.list,
 #' in `filters` to prior to combining results.
 #'
 #' @returns Logical vector.
+#'
+#' @importFrom magrittr or
 #'
 #' @export
 combine.filters <- function(filters, missing = FALSE) {
@@ -650,6 +830,9 @@ combine.filters <- function(filters, missing = FALSE) {
 #'
 #' @returns Plot object.
 #'
+#' @importFrom ggplot2 ggplot aes geom_point labs theme_minimal scale_x_log10 scale_y_log10
+#' @importFrom scales label_number cut_short_scale
+#'
 #' @export
 scatter.plot <- function(data,
                          x,
@@ -670,8 +853,8 @@ scatter.plot <- function(data,
     ggplot2::theme_minimal()
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- c("x", "y")
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
   }
 
   return(plot)
@@ -687,6 +870,10 @@ scatter.plot <- function(data,
 #' @param points Logical scalar (default `TRUE`). Add beeswarm points.
 #'
 #' @returns Plot object.
+#'
+#' @importFrom ggplot2 ggplot aes geom_violin labs theme_minimal scale_y_log10
+#' @importFrom ggbeeswarm geom_quasirandom
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 violin.plot <- function(data,
@@ -714,7 +901,7 @@ violin.plot <- function(data,
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- "y"
     if ("x" %in% log) stop("Unable to log transform categorical x-axis scale")
-    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10()
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
   }
 
   return(plot)
@@ -727,22 +914,42 @@ violin.plot <- function(data,
 #'
 #' @param data Data frame or object coercible to data frame.
 #' @param x Column in `data` to determine x position.
+#' @param y Function to determine y position after [ggplot2::stat_bin()]; see [ggplot2::after_stat()].
+#' @param fill Column in `data` to determine fill.
 #' @param ... Fixed aesthetics to pass to [ggplot2::geom_histogram()].
 #' @param title Character scalar specifying plot title.
 #' @param x.lab Character scalar specifying x-axis label.
+#' @param y.lab Character scalar specifying y-axis label.
+#' @param fill.lab Character scalar specifying fill legend label.
+#' @param log Log-transform axis scales:
+#' * `TRUE` to transform all axes
+#' * Character vector with values 'x' and/or 'y' to transform specified axes
 #'
 #' @returns Plot object.
+#'
+#' @importFrom ggplot2 ggplot geom_histogram labs theme_minimal scale_x_log10 scale_y_log10 after_stat
+#' @importFrom scales label_number cut_short_scale
 #'
 #' @export
 hist.plot <- function(data,
                       x,
+                      y = ggplot2::after_stat(count),
+                      fill,
                       ...,
                       title = NULL,
-                      x.lab = NULL) {
-  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }})) +
-    ggplot2::geom_histogram(...) +
-    ggplot2::labs(title = title, x = x.lab) +
+                      x.lab = NULL,
+                      y.lab = NULL,
+                      fill.lab = NULL,
+                      log = FALSE) {
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = {{ x }}, y = {{ y }}, fill = {{ fill }})) +
+    ggplot2::geom_histogram(position = "identity", ...) +
+    ggplot2::labs(title = title, x = x.lab, y = y.lab, fill = fill.lab) +
     ggplot2::theme_minimal()
+  if (!is.null(log)) {
+    if (is.logical(log) && log) log <- c("x", "y")
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
+    if ("y" %in% log) plot <- plot + ggplot2::scale_y_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
+  }
 
   return(plot)
 }
@@ -765,6 +972,10 @@ hist.plot <- function(data,
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr group_by summarise n
+#' @importFrom ggplot2 ggplot geom_col scale_y_discrete labs theme_minimal scale_x_log10
+#' @importFrom scales label_number cut_short_scale
+#'
 #' @export
 bar.plot <- function(data,
                      pos,
@@ -786,7 +997,7 @@ bar.plot <- function(data,
     ggplot2::theme_minimal()
   if (!is.null(log)) {
     if (is.logical(log) && log) log <- "x"
-    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10()
+    if ("x" %in% log) plot <- plot + ggplot2::scale_x_log10(labels = scales::label_number(scale_cut = append(scales::cut_short_scale(), 1, 1)))
     if ("y" %in% log) stop("Unable to log transform categorical y-axis scale")
   }
 
@@ -801,7 +1012,7 @@ bar.plot <- function(data,
 #'
 #' @param bcrank.res DataFrame output of [DropletUtils::barcodeRanks()].
 #' @param cells Character vector of cell-containing barcodes.
-#' @param ... Arguments to pass to [scatter.plot()]
+#' @param ... Arguments to pass to [scatter.plot()].
 #'
 #' @returns Plot object.
 #'
@@ -809,15 +1020,17 @@ bar.plot <- function(data,
 bcrank.plot <- function(bcrank.res, cells, ...) {
   data <- bcrank.res %>%
     as.data.frame() %>%
-    dplyr::mutate(cell = dplyr::if_else(rownames(.) %in% cells, TRUE, FALSE)) %>%
-    dplyr::group_by(rank, total, cell) %>%
-    dplyr::summarise(fraction.cells = sum(cell) / dplyr::n())
+    mutate(cell = if_else(rownames(.) %in% cells, TRUE, FALSE)) %>%
+    group_by(rank, total) %>%
+    summarise(fraction.cells = sum(cell) / n()) %>%
+    arrange(rank, desc(fraction.cells))
 
   plot <- scatter.plot(
     data,
     x = rank,
     y = total,
     colour = fraction.cells,
+    log = TRUE,
     ...
   )
 
@@ -825,26 +1038,36 @@ bcrank.plot <- function(bcrank.res, cells, ...) {
 }
 
 
-#' Generate Monte Carlo p-value histogram for background barcodes
+#' Generate feature log-counts histogram plots
 #'
-#' Makes a histogram of computed p-values for droplets with UMI count less than
-#' `lower` parameter used for [DropletUtils::emptyDrops()] (requires parameter
-#' `test.ambient = TRUE`).
+#' Makes log-counts histogram plots for selected features.
 #'
-#' @param ed.res DataFrame output of [DropletUtils::emptyDrops()].
-#' @param ... Arguments to pass to [hist.plot()].
+#' @param matrix Matrix or matrix-like object containing counts with
+#'  features as row names.
+#' @param features.pattern Character vector of regular expressions to select
+#'  features for plotting.
+#' #' @param ... Arguments to pass to [hist.plot()].
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr bind_cols everything
+#' @importFrom tidyr pivot_longer
+#'
 #' @export
-pvalue.plot <- function(ed.res, ...) {
-  data <- ed.res %>%
+logcounts.histplot <- function(matrix,
+                               features.pattern = "^[a-zA-Z]+_",
+                               ...) {
+  data <- matrix[grepl(pattern = features.pattern, x = rownames(matrix)), ] %>%
+    as.matrix() %>%
+    t() %>%
     as.data.frame() %>%
-    dplyr::filter(Total <= metadata(ed.res)$lower & Total > 0)
+    tidyr::pivot_longer(cols = dplyr::everything(), names_to = "Feature", values_to = "count")
 
   plot <- hist.plot(
-    data,
-    x = PValue,
+    data = data,
+    x = count,
+    fill = Feature,
+    log = "x",
     ...
   )
 
@@ -852,7 +1075,7 @@ pvalue.plot <- function(ed.res, ...) {
 }
 
 
-#' Generate feature log-counts distribution plots
+#' Generate feature log-counts ridge plots
 #'
 #' Makes log-counts distribution plots for selected features, optionally
 #' grouping by sample.
@@ -872,25 +1095,34 @@ pvalue.plot <- function(ed.res, ...) {
 #' @param samples Character vector of the same length as number of
 #'  cells specifying sample of origin. If specified, will group by sample.
 #' @param title Character scalar specifying plot title.
+#' @param x.lab Character scalar specifying x-axis label.
+#' @param y.lab Character scalar specifying y-axis label.
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr bind_cols mutate across everything
+#' @importFrom tidyr pivot_longer
+#' @importFrom ggplot2 aes geom_density_ridges scale_y_discrete xlim labs theme_minimal theme
+#' @importFrom ggridges geom_density_ridges
+#'
 #' @export
-logcounts.plot <- function(matrix,
-                           ...,
-                           features.pattern = "^[a-zA-Z]+_",
-                           pseudocount = 1,
-                           x.lower = 0.3,
-                           x.upper = max(log10(matrix + pseudocount)),
-                           samples = NULL,
-                           title = NULL) {
+logcounts.ridgeplot <- function(matrix,
+                                ...,
+                                features.pattern = "^[a-zA-Z]+_",
+                                pseudocount = 1,
+                                x.lower = 0.3,
+                                x.upper = max(log10(matrix + pseudocount)),
+                                samples = NULL,
+                                title = NULL,
+                                x.lab = sprintf("log10(UMI count + %d)", pseudocount),
+                                y.lab = ifelse(is.null(samples), "Feature", "Sample")) {
   data <- matrix %>%
     as.matrix() %>%
     t() %>%
     as.data.frame() %>%
-    dplyr::mutate(across(everything(), ~ log10(.x + pseudocount)))
+    dplyr::mutate(dplyr::across(dplyr::everything(), ~ log10(.x + pseudocount)))
   if (!is.null(samples)) data <- dplyr::bind_cols(data, Sample = samples)
-  data <- tidyr::pivot_longer(data, cols = matches(features.pattern), names_to = "Feature", values_to = "count")
+  data <- tidyr::pivot_longer(data, cols = dplyr::matches(features.pattern) & !dplyr::matches("^Sample$"), names_to = "Feature", values_to = "count")
 
   plot <- ggplot2::ggplot(data = data)
   if (is.null(samples)) {
@@ -905,8 +1137,8 @@ logcounts.plot <- function(matrix,
     ggplot2::xlim(x.lower, x.upper) +
     ggplot2::labs(
       title = title,
-      x = sprintf("log10(UMI count + %d)", pseudocount),
-      y = ifelse(is.null(samples), "Feature", "Sample")
+      x = x.lab,
+      y = y.lab
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(strip.text = ggplot2::element_text(hjust = 0))
@@ -915,135 +1147,213 @@ logcounts.plot <- function(matrix,
 }
 
 
-#' Generate tSNE/UMAP plot of known and predicted multiplets
+#' Generate demultiplexing scatter biplots
 #'
-#' Makes tSNE/UMAP plot of known and predicted multiplets using the output of
-#' [scDblFinder::recoverDoublets()].
+#' Makes scatter biplots of log-counts for selected features, coloured by demultiplexing classification.
 #'
-#' @param x A SingleCellExperiment object.
-#' @param rd.res DataFrame output of [scDblFinder::recoverDoublets()].
-#' @param ... Fixed aesthetics to pass to [ggplot2::geom_point()].
-#' @param projection Character scalar. Determines type of projection used for
-#'  plotting cells (will be computed if not present in `reducedDims(x)`):
-#'  * 'TSNE': Use t-SNE projection
-#'  * 'UMAP': Use UMAP projection
-#' @param use.dimred Character or integer scalar specifying existing dimensionality
-#'  reduction results to use for computing projection; only used if `projection`
-#'  not present in `reducedDims(x)`.
-#' @param random.seed Optional random seed for reproducibility of computed
-#'  projection.
+#' @param matrix Matrix or matrix-like object containing counts with
+#' features as row names.
+#' @param res A data frame with one row per cell barcode and character columns 'HTO' and 'Classification'
+#' indicating HTO assignment(s) (comma-separated if multiple) and final classification respectively.
+#' @param feature.1 Character scalar specifying first feature to plot.
+#' @param feature.2 Character scalar specifying second feature to plot.
+#' @param ... Fixed aesthetics to pass to [scatter.plot()].
 #'
 #' @returns Plot object.
 #'
+#' @importFrom dplyr arrange bind_cols
+#' @importFrom stringr str_split
+#' @importFrom rlang sym
+#'
+#' @export
+demux.plot <- function(matrix,
+                       res,
+                       feature.1,
+                       feature.2,
+                       ...) {
+  data <- matrix %>%
+    as.matrix() %>%
+    t() %>%
+    as.data.frame() %>%
+    dplyr::bind_cols(res)
+  keep <- sapply(
+    stringr::str_split(res$HTO, ","),
+    function(x) {
+      if (length(x) == 1) {
+        out <- any(c(feature.1, feature.2, "negative", "uncertain") %in% x)
+      } else {
+        out <- all(c(feature.1, feature.2) %in% x)
+      }
+      return(out)
+    }
+  )
+  data <- data[keep, ] %>%
+    dplyr::arrange(Classification)
+
+  plot <- scatter.plot(
+    data = data,
+    x = !!rlang::sym(feature.1),
+    y = !!rlang::sym(feature.2),
+    colour = Classification,
+    x.lab = paste(feature.1, "UMI count"),
+    y.lab = paste(feature.2, "UMI count"),
+    colour.lab = "Classification",
+    log = TRUE,
+    ...
+  )
+
+  return(plot)
+}
+
+
+#' Generate UMAP plot of known and predicted multiplets
+#'
+#' Makes UMAP plot of known and predicted multiplets. If multiple dimensionality reductions
+#' are present in the input Seurat object, a weighted nearest neighbour UMAP projection is
+#' computed.
+#'
+#' @param x A Seurat object contianing precomputed dimensionality reduction (PCA/LSI).
+#' @param res A data frame with one row per cell barcode and boolean columns 'known' and 'predicted'
+#' indicating whether the barcode is a known or predicted multiplet respectively.
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_point()].
+#'
+#' @returns Plot object.
+#'
+#' @importFrom SeuratObject AddMetaData Reductions FetchData
+#' @importFrom Seurat FindMultiModalNeighbors FindNeighbors RunUMAP
+#' @importFrom dplyr case_when
+#' @importFrom ggplot2 ggplot aes geom_point scale_colour_manual labs theme_minimal
+#'
 #' @export
 multiplet.plot <- function(x,
-                           rd.res,
-                           ...,
-                           projection = c("TSNE", "UMAP"),
-                           use.dimred = NULL,
-                           random.seed = NULL) {
-  if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
+                           res,
+                           ...) {
+  if (!is(x, "Seurat")) stop("x must be an object of class 'Seurat'")
 
-  x <- add.cell.metadata(x, rd.res)
+  x <- SeuratObject::AddMetaData(x, res)
   x$Type <- dplyr::case_when(
     x$known ~ "known",
     x$predicted ~ "predicted",
     TRUE ~ "singlet"
   )
 
-  projection <- match.arg(projection)
-  if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
-    set.seed(random.seed)
-    if (projection == "TSNE") {
-      x <- scater::runTSNE(x, dimred = use.dimred)
-    } else if (projection == "UMAP") {
-      x <- scater::runUMAP(x, dimred = use.dimred)
-    }
+  if (length(SeuratObject::Reductions(x)) > 1) {
+    x <- Seurat::FindMultiModalNeighbors(
+      x,
+      reduction.list = SeuratObject::Reductions(x),
+      dims.list = lapply(SeuratObject::Reductions(x), function(x) seq.int(from = if (x == "lsi") 2 else 1, to = 30)),
+      weighted.nn.name = "nn",
+      verbose = FALSE
+    )
+  } else {
+    x <- Seurat::FindNeighbors(
+      x,
+      reduction = SeuratObject::Reductions(x),
+      dims = seq.int(from = if (SeuratObject::Reductions(x) == "lsi") 2 else 1, to = 30),
+      return.neighbor = TRUE,
+      graph.name = "nn",
+      verbose = FALSE
+    )
   }
+  x <- Seurat::RunUMAP(x, nn.name = "nn", spread = 10, verbose = FALSE) # increase spread to improve multiplet separation for visualisation
 
-  var.x <- rlang::sym(paste(projection, "1", sep = "."))
-  var.y <- rlang::sym(paste(projection, "2", sep = "."))
-  plot <- scater::ggcells(x, mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, colour = Type)) +
+  plot <- ggplot2::ggplot(data = SeuratObject::FetchData(x, vars = c("umap_1", "umap_2", "Type")), mapping = ggplot2::aes(x = umap_1, y = umap_2, colour = Type)) +
     ggplot2::geom_point(...) +
     ggplot2::scale_colour_manual(values = c("singlet" = "grey80", "known" = "#d82526", "predicted" = "#ffc156")) +
-    ggplot2::labs(title = "Multiplets", x = paste(projection, "1", sep = "_"), y = paste(projection, "2", sep = "_")) +
+    ggplot2::labs(title = "Multiplet assignment", x = "UMAP1", y = "UMAP2") +
     ggplot2::theme_minimal()
 
   return(plot)
 }
 
-#' Generate tSNE/UMAP plot of batch corrected cells
+
+#' Generate TSS enrichment plot
 #'
-#' Makes tSNE/UMAP plot of batch corrected cells using the output of
-#' [batchelor::correctExperiments()].
+#' Makes a plot of mean enrichment scores by distance from TSS for a set of cell barcodes.
 #'
-#' @inheritParams multiplet.plot
-#' @param x SingleCellExperiment object output of
-#'  [batchelor::correctExperiments()].
-#' @param control Character scalar specifying name of control sample (i.e. a
-#'  cross-batch technical replicate).
-#' @param assay.type Character or integer scalar specifying which assay in `x`
-#'  contains log-normalised expression values; only used if existing dimensionality
-#'  reduction results not present in `reducedDims(x)`.
-#' @param n.cells Integer scalar (default 10000). Specifies number of cells to
-#'  plot; if `x` contains more cells, will randomly downsample to `n.cells`.
-#'  Useful for reducing overplotting and reducing size of interactive plots. Set
-#'  to `Inf` to force plotting all cells in `x`.
-#' @param title Character scalar specifying plot title.
+#' @param x Object of class 'Seurat' or 'ChromatinAssay' containing TSS enrichment scores.
+#' Alternatively, a sparse matrix of TSS enrichment scores with cell barcodes as rows and distance
+#' from TSS as columns.
+#' @param assay Character scalar specifying assay to use in 'Seurat' object. (default is to
+#' use the default assay).
+#' @param cells Character vector of cell barcodes (default is to use all barcodes).
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_line()].
 #'
 #' @returns Plot object.
 #'
+#' @importFrom Seurat DefaultAssay GetAssayData
+#' @importFrom tibble rownames_to_column
+#' @importFrom dplyr mutate
+#' @importFrom ggplot2 ggplot aes geom_line labs theme_minimal
+#'
 #' @export
-batch.plot <- function(x,
-                       ...,
-                       control = NULL,
-                       assay.type = c("merged", "corrected"),
-                       projection = c("TSNE", "UMAP"),
-                       use.dimred = c("PCA", "corrected"),
-                       n.cells = 10000,
-                       random.seed = NULL,
-                       title = NULL) {
-  if (!is(x, "SingleCellExperiment")) stop("x must be an object of class 'SingleCellExperiment'")
-
-  if (is.null(control)) {
-    x$control <- FALSE
-  } else {
-    x$control <- ifelse(x$Sample == control, TRUE, FALSE)
+tss.plot <- function(x,
+                     assay = NULL,
+                     cells = NULL,
+                     ...) {
+  if (is(x, "Seurat")) {
+    assay <- assay %||% Seurat::DefaultAssay(x)
+    x <- x[[assay]]
+    if (!is(x, "ChromatinAssay")) stop("Assay must be an object of class 'ChromatinAssay'")
   }
-
-  if (length(SingleCellExperiment::reducedDims(x)) == 0) {
-    set.seed(random.seed)
-    if (!is.integer(assay.type)) assay.type <- match.arg(SummarizedExperiment::assayNames(x)[1], choices = assay.type)
-    dec <- scran::modelGeneVar(x, assay.type = "logcounts", block = x$batch)
-    hvg <- scran::getTopHVGs(dec, n = 5000)
-    x <- scater::runPCA(x, assay.type = assay.type, subset_row = hvg)
+  if (is(x, "ChromatinAssay")) {
+    x <- Seurat::GetAssayData(x, layer = "positionEnrichment")[["TSS"]]
+    if (is.null(x)) stop("No TSS enrichment scores found in assay")
   }
-
-  if (!is.integer(use.dimred)) use.dimred <- match.arg(SingleCellExperiment::reducedDimNames(x), choices = use.dimred)
-  projection <- match.arg(projection)
-  if (!projection %in% names(SingleCellExperiment::reducedDims(x))) {
-    set.seed(random.seed)
-    if (projection == "TSNE") {
-      x <- scater::runTSNE(x, dimred = use.dimred)
-    } else if (projection == "UMAP") {
-      x <- scater::runUMAP(x, dimred = use.dimred)
-    }
+  if (!is(x, "sparseMatrix")) {
+    stop("x must be an object of class 'Seurat' or 'ChromatinAssay' containing TSS enrichment scores or a sparse matrix of TSS enrichment scores")
   }
+  if (!is.null(cells)) x <- x[cells, ]
 
-  var.x <- rlang::sym(paste(projection, "1", sep = "."))
-  var.y <- rlang::sym(paste(projection, "2", sep = "."))
-  plot <- scater::ggcells(
-    x[, sample(seq_len(ncol(x)), min(n.cells, ncol(x)))],
-    mapping = ggplot2::aes(x = {{ var.x }}, y = {{ var.y }}, fill = batch, colour = control)
-  ) +
-    ggplot2::geom_point(...) +
-    ggplot2::labs(
-      title = title,
-      x = paste(projection, "1", sep = "_"),
-      y = paste(projection, "2", sep = "_"),
-      fill = "Batch",
-      colour = "Control"
-    ) +
+  data <- Matrix::colMeans(x)
+  data <- data %>%
+    data.frame(mean.enrichment = .) %>%
+    tibble::rownames_to_column("distance") %>%
+    dplyr::mutate(distance = as.integer(distance))
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = distance, y = mean.enrichment)) +
+    ggplot2::geom_line(...) +
+    ggplot2::labs(title = "Tn5 insertion frequency", x = "Distance from TSS (bp)", y = "Relative frequency") +
+    ggplot2::theme_minimal()
+
+  return(plot)
+}
+
+
+#' Generate histogram of fragment size distribution
+#'
+#' Makes a histogram of fragment size distribution for a set of cell barcodes.
+#' Uses a representative region of the genome to avoid reading all fragments into
+#' memory.
+#'
+#' @param fragments Fragments object.
+#' @param cells Character vector of cell barcodes (default is to use all barcodes in fragments object).
+#' @param region Character vector specifying genomic regions to use (default is to use first million bases
+#' from chromosomes 1-22 and X).
+#' @param ... Fixed aesthetics to pass to [ggplot2::geom_freqpoly()].
+#'
+#' @returns Plot object.
+#'
+#' @importFrom Signac GetFragmentData GetReadsInRegion
+#' @importFrom ggplot2 ggplot aes geom_freqpoly scale_y_continuous xlim labs theme_minimal
+#'
+#' @export
+fragments.plot <- function(fragments,
+                           cells = NULL,
+                           region = paste(sprintf("chr%s", c(as.character(1:22), "X")), "1", "1000000", sep = "-"),
+                           ...) {
+  if (!is(fragments, "Fragment")) stop("fragments must be an object of class 'Fragment'")
+
+  data <- Signac:::GetReadsInRegion(
+    cellmap = Signac::GetFragmentData(fragments, slot = "cells"),
+    region = region,
+    tabix.file = Signac::GetFragmentData(fragments, slot = "path"),
+    cells = cells
+  )
+  plot <- ggplot2::ggplot(data = data, mapping = ggplot2::aes(x = length, y = ggplot2::after_stat(density), text = paste("percent: ", after_stat(density) * 100))) +
+    ggplot2::geom_freqpoly(...) +
+    ggplot2::scale_y_continuous(labels = scales::percent_format()) +
+    ggplot2::xlim(20, 700) +
+    ggplot2::labs(title = "Fragment length distribution", x = "Length (bp)", y = "Fragments (%)") +
     ggplot2::theme_minimal()
 
   return(plot)

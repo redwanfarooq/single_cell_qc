@@ -9,14 +9,14 @@ DOC <- "
 Merge multimodal count matrices into a single 10x Genomics HDF5 file
 
 Usage:
-  merge.R --gex=<path> [--atac=<path>] [--adt=<path>] [--adt-prefix=<prefix>] --output=<path> [options]
+  merge.R [--gex=<path>] [--atac=<path>] [--adt=<path>] [--adt-prefix=<prefix>] --output=<path> [options]
 
 Arguments:
   REQUIRED
-  --gex=<path>                Path to GEX matrix (10x Genomics Matrix Market format)
   -o --output=<path>          Path to output matrix (10x Genomics HDF5 format)
 
   OPTIONAL:
+  --gex=<path>                Path to GEX matrix (10x Genomics Matrix Market format)
   --atac=<path>               Path to ATAC matrix (10x Genomics Matrix Market format)
   --adt=<path>                Path to ADT matrix (10x Genomics Matrix Market format or BarCounter CSV format)
   --adt-prefix=<prefix>       Prefix for ADT features [default: ADT_]
@@ -45,14 +45,21 @@ suppressPackageStartupMessages({
 
 source("utils.R")
 
+# Check input
+if (is.null(opt$gex) && is.null(opt$atac) && is.null(opt$adt)) {
+  stop("At least one of --gex, --atac or --adt must be provided")
+}
+
 
 # ==============================
 # SCRIPT
 # ==============================
 counts <- list()
-logger::log_info("Loading GEX matrix: {opt$gex}")
-counts[["Gene Expression"]] <- get.10x.matrix(file = opt$gex, type = "Gene Expression")
-counts[["Gene Expression"]] <- counts[["Gene Expression"]][, colSums(counts[["Gene Expression"]]) > 0] # remove cell barcodes with zero counts
+if (!is.null(opt$gex)) {
+  logger::log_info("Loading GEX matrix: {opt$gex}")
+  counts[["Gene Expression"]] <- get.10x.matrix(file = opt$gex, type = "Gene Expression")
+  counts[["Gene Expression"]] <- counts[["Gene Expression"]][, colSums(counts[["Gene Expression"]]) > 0] # remove cell barcodes with zero counts
+}
 if (!is.null(opt$atac)) {
   logger::log_info("Loading ATAC matrix: {opt$atac}")
   counts[["Peaks"]] <- get.10x.matrix(file = opt$atac, type = "Peaks")

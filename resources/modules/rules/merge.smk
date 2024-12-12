@@ -13,7 +13,7 @@ rule merge:
 	threads: 1
 	params:
 		script_path = scripts_dir if os.path.isabs(scripts_dir) else os.path.join(workflow.basedir, scripts_dir),
-		flags = lambda wildcards: get_merge_flags(wildcards, gex=config["gex_matrix"], atac=config.get("atac_matrix", None), adt=config.get("adt_matrix", None), adt_prefix=config.get("adt_prefix", None))
+		flags = lambda wildcards: get_merge_flags(wildcards, gex=config.get("gex_matrix", None), atac=config.get("atac_matrix", None), adt=config.get("adt_matrix", None), adt_prefix=config.get("adt_prefix", None))
 	conda: "single_cell_qc"
 	# envmodules: "R-cbrg"
 	message: "Merging multimodal count matrices for {wildcards.sample}"

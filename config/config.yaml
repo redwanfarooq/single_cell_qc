@@ -12,12 +12,8 @@
 # REQUIRED
 # Pipeline module for QC workflow
 # Options:
-#   default: Default pipeline (EmptyDrops/multimodal/combined cell calling, DecontX/DecontPro ambient removal)
-#     Additional required configuration:
-#       - 'gex_matrix' (input/output)
-#   cellbender (CellBender cell calling/ambient removal)
-#     Additional required configuration:
-#       - 'gex_matrix' (input/output)
+#   default: Default pipeline (EmptyDrops/k-means/combined cell calling, scDblFinder/COMPOSITE/combined multiplet calling, DecontX/DecontPro ambient removal)
+#   cellbender (alternative using CellBender ambient removal +/- cell calling)
 module: default
 
 
@@ -71,25 +67,28 @@ adt_isotype: Isotype # default: null; regex pattern for isotype control antibody
 hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 # droplet_qc.Rmd
-cell_calling_algorithm: combined # default: emptydrops; options: emptydrops, multimodal, combined; only 'multimodal' is supported if using CellBender
+cell_calling_algorithm: combined # default: emptydrops; options: emptydrops, kmeans, combined
+cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
+  - gex
+  - atac
+  - adt
+ordmag_quantile: 0.99 # default: 0.99
+ordmag_ratio: 10 # default: 10
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 20000 # default: 20000
 emptydrops_ind_min: 45000 # default: 45000
 emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
-multimodal_modalities: # default: gex, atac, adt; options: gex, atac, adt
-  - gex
-  # - atac
-  - adt
-multimodal_ordmag_quantile: 0.99 # default: 0.99
-multimodal_ordmag_ratio: 10 # default: 10
+emptydrops_max_attempts: 3 # default: 3
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_calling: true # default: true
+multiplet_calling_algorithm: null # default: null; options: scdblfinder, composite, combined
 scdblfinder_clusters: true # default: true
-scdblfinder_dbr_sd: 1 # default: 1
-multiplet_projection: TSNE # default: TSNE; options: TSNE, UMAP
+scdblfinder_dbr_sd: null # default: null
+scdblfinder_nfeatures: 1500 # default: 1500
+scdblfinder_npcs: 20 # default: 20
+scdblfinder_max_depth: 5 # default: 5
 # libraries_qc.Rmd
 # Each filter can be specified as 'false', 'true' or a numeric threshold
 # If set to 'false', the filter will be skipped
@@ -127,7 +126,7 @@ adt_ambient_removal:
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
-  cluster_markers: # default: null; list of cluster marker ADT IDs (without 'ADT_' prefix) for diagnostic plots
+  cluster_markers: # default: null; list of cluster marker ADT IDs (without prefix) for diagnostic plots
     - CD3
     - CD4
     - CD8
