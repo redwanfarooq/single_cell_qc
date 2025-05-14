@@ -23,18 +23,18 @@ module: default
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/processed/gex_fb/test_07/qc
-  reports: /project/fuggerlab/rfarooq/project/ms_snp_crispri/results/reports/gex_fb/test_07/qc
+  data: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/processed/gex_fb/cd4_ms17_ms19_stat4/qc
+  reports: /project/fuggerlab/rfarooq/project/ms_snp_crispri/results/reports/gex_fb/cd4_ms17_ms19_stat4/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /project/fuggerlab/bcutler/data_processing/projects/CRISPR_project/data/raw/cellranger/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
+gex_matrix: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/raw/gex_fb/cd4_ms17_ms19_stat4/cellranger/{sample}/outs/raw_feature_bc_matrix/matrix.mtx.gz
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /project/fuggerlab/bcutler/data_processing/projects/CRISPR_project/data/raw/qc/count_reads/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/raw/gex_fb/cd4_ms17_ms19_stat4/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -76,7 +76,7 @@ ordmag_quantile: 0.99 # default: 0.99
 ordmag_ratio: 10 # default: 10
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
-emptydrops_cand_max_n: 20000 # default: 20000
+emptydrops_cand_max_n: 25000 # default: 20000
 emptydrops_ind_min: 45000 # default: 45000
 emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
