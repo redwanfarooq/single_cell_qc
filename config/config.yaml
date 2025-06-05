@@ -129,6 +129,9 @@ target_depth:
   # ATAC: 25000 # default: 25000
   ADT: 5000 # default: 5000
   HTO: 2000 # default: 2000
+  CRISPR: 5000 # default: 5000
+  BCR: 5000 # default: 5000
+  TCR: 5000 # default: 5000
 
 
 # --------------------------------------------------
