@@ -18,7 +18,7 @@ rule summary:
         input_dir = config["output_dir"]["data"],
         samples = ",".join(samples),
         read_counts = config.get("read_counts", ""),
-        target_depth = ",".join([f"{k}:{v}" for k, v in config.get("target_depth", {"GEX": 20000, "ATAC": 25000, "ADT": 5000, "HTO": 2000}).items()]),
+        target_depth = ",".join([f"{k}:{v}" for k, v in config.get("target_depth", {"GEX": 20000, "ATAC": 25000, "ADT": 5000, "HTO": 2000, "CRISPR": 5000, "BCR": 5000, "TCR": 5000}).items()]),
         output_path = os.path.join(config["output_dir"]["reports"], "summary")
     conda: "quarto"
     # envmodules: "python-cbrg"
