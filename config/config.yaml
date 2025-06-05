@@ -14,7 +14,7 @@
 # Options:
 #   default: Default pipeline (EmptyDrops/k-means/combined cell calling, scDblFinder/COMPOSITE/combined multiplet calling, DecontX/DecontPro ambient removal)
 #   cellbender (alternative using CellBender ambient removal +/- cell calling)
-module: 
+module: cellbender
 
 
 # --------------------------------------------------
@@ -23,18 +23,18 @@ module:
 # REQUIRED
 # Output directories
 output_dir:
-  data: /project/fuggerlab/rfarooq/project/project_name/data/processed/qc
-  reports: /project/fuggerlab/rfarooq/project/project_name/results/reports/qc
+  data: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/processed/qc
+  reports: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/results/reports/qc
 
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
-gex_matrix: /path/to/gex_dir/{sample}/file.ext
-hto_matrix: /path/to/hto_dir/{sample}/file.ext
-atac_matrix: /path/to/atac_dir/{sample}/file.ext
-adt_matrix: /path/to/adt_dir/{sample}/file.ext
+gex_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
+hto_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
+# atac_matrix: /path/to/atac_dir/{sample}/file.ext
+adt_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
-read_counts: /path/to/read_counts.tsv
+read_counts: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/qc/count_reads/read_counts.tsv
 # If 'scripts_dir' not specified, defaults to
 # 'resources/scripts'
 # scripts_dir:
@@ -70,20 +70,20 @@ pre_filtered: false # default: false; set to true if input matrices are pre-filt
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
 cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
   - gex
-  - atac
-  - adt
+  # - atac
+  # - adt
 ordmag_quantile: 0.99 # default: 0.99
 ordmag_ratio: 10 # default: 10
 emptydrops_umi_min: 500 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
-emptydrops_cand_max_n: 20000 # default: 20000
+emptydrops_cand_max_n: 30000 # default: 20000
 emptydrops_ind_min: 45000 # default: 45000
 emptydrops_ind_max: 90000 # default: 90000
 emptydrops_niters: 10000 # default: 10000
 emptydrops_max_attempts: 3 # default: 3
 demuxmix_model: auto # default: auto; options: auto, naive
 demuxmix_pAcpt: 0.9 # default: 0.9
-multiplet_calling_algorithm: null # default: null; options: scdblfinder, composite, combined
+multiplet_calling_algorithm: scdblfinder # default: null; options: scdblfinder, composite, combined
 scdblfinder_clusters: true # default: true
 scdblfinder_dbr_sd: null # default: null
 scdblfinder_nfeatures: 1500 # default: 1500
@@ -106,18 +106,18 @@ atac_filters:
   blacklist_fraction: true # default: true
 adt_filters:
   zero_ambient: true # default: true; set to false if using CellBender
-  high_ambient: true # default: true; set to false if using CellBender
-  high_controls: true # default: true
+  high_ambient: false # default: true; set to false if using CellBender
+  high_controls: false # default: true
 # ambient_removal.Rmd
 gex_ambient_removal:
-  skip: false # default: false
+  skip: true # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
   cluster_res: 0.05 # default: 0.05
   cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
 adt_ambient_removal:
-  skip: false # default: false
+  skip: true # default: false
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
@@ -126,7 +126,7 @@ adt_ambient_removal:
 # summary_report.qmd
 target_depth:
   GEX: 20000 # default: 20000
-  ATAC: 25000 # default: 25000
+  # ATAC: 25000 # default: 25000
   ADT: 5000 # default: 5000
   HTO: 2000 # default: 2000
 
@@ -138,6 +138,6 @@ target_depth:
 # If not specified, defaults to ''
 cellbender_args: >-
   --cuda
-  --fpr 0.01
+  --fpr 0
   --exclude-feature-types Peaks
   --total-droplets-included 30000
