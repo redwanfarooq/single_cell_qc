@@ -126,7 +126,7 @@ adt_ambient_removal:
 # summary_report.qmd
 target_depth:
   GEX: 20000 # default: 20000
-  # ATAC: 25000 # default: 25000
+  ATAC: 25000 # default: 25000
   ADT: 5000 # default: 5000
   HTO: 2000 # default: 2000
   CRISPR: 5000 # default: 5000
