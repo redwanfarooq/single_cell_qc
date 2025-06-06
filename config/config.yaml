@@ -73,7 +73,7 @@ adt_prefix: ADT_ # default: ADT_; prefix for ADT features
 adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
 hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
-pre_demultiplexed: false # default: false; set to true if using pre-computed cell hashing demultiplexing results (e.g. Cell Ranger 'multi' pipeline output) - MUST provide path to results using 'hashing_assignments'
+pre_demultiplexed: true # default: false; set to true if using pre-computed cell hashing demultiplexing results (e.g. Cell Ranger 'multi' pipeline output) - MUST provide path to results using 'hashing_assignments'
 # droplet_qc.Rmd
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
 cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
@@ -153,3 +153,4 @@ cellbender_args: >-
   --exclude-feature-types Peaks
   --total-droplets-included 45000
   --expected-cells 15000
+  --learning-rate 0.00005
