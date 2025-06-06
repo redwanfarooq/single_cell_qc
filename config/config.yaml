@@ -29,7 +29,7 @@ output_dir:
 # OPTIONAL
 # File paths for count matrices (use {sample} as placeholder for sample name)
 gex_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
-hto_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
+# hto_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 adt_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
 # File path to delimited file (e.g. TSV, CSV) containing pre-computed results of cell hashing demultiplexing per cell-containing barcode
