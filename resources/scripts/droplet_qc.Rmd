@@ -20,7 +20,7 @@ params:
   hto_prefix: HTO_
   fragments: null
   pre_filtered: false
-  pre_demultipexed: false
+  pre_demultiplexed: false
   cell_calling_algorithm: emptydrops
   cell_calling_modalities:
     - gex
