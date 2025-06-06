@@ -74,7 +74,7 @@ cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
   # - adt
 ordmag_quantile: 0.99 # default: 0.99
 ordmag_ratio: 10 # default: 10
-emptydrops_umi_min: 500 # default: 500
+emptydrops_umi_min: 100 # default: 500
 emptydrops_umi_min_frac_median: 0.01 # default: 0.01
 emptydrops_cand_max_n: 30000 # default: 20000
 emptydrops_ind_min: 45000 # default: 45000
@@ -105,8 +105,8 @@ atac_filters:
   peak_fraction: true # default: true
   blacklist_fraction: true # default: true
 adt_filters:
-  zero_ambient: true # default: true; set to false if using CellBender
-  high_ambient: false # default: true; set to false if using CellBender
+  zero_ambient: false # default: true; set to false if using CellBender
+  high_ambient: true # default: true; set to false if using CellBender
   high_controls: false # default: true
 # ambient_removal.Rmd
 gex_ambient_removal:
@@ -143,4 +143,5 @@ cellbender_args: >-
   --cuda
   --fpr 0
   --exclude-feature-types Peaks
-  --total-droplets-included 30000
+  --total-droplets-included 45000
+  --expected-cells 15000
