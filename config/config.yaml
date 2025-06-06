@@ -32,6 +32,13 @@ gex_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/ce
 hto_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 adt_matrix: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/count/raw_feature_bc_matrix/matrix.mtx.gz
+# File path to delimited file (e.g. TSV, CSV) containing pre-computed results of cell hashing demultiplexing per cell-containing barcode
+# Output of Cell Ranger 'multi' pipeline (assignment_confidence_table.csv) is automatically recognized
+# If using a different demultiplexing tool, MUST contain the following columns:
+#   Barcode: droplet barcode
+#   Type: either 'singlet', 'multiplet', 'negative' or 'uncertain'
+#   Classification: assigned hashtag ID (if 'singlet') or 'multiplet', 'negative' or 'uncertain'
+hashing_assignments: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/cellranger_multi/{sample}/outs/multi/multiplexing_analysis/assignment_confidence_table.csv
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
 read_counts: /project/fuggerlab/rfarooq/project/ms_pregnancy_multiome/data/raw/qc/count_reads/read_counts.tsv
@@ -66,6 +73,7 @@ adt_prefix: ADT_ # default: ADT_; prefix for ADT features
 adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
 hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
+pre_demultiplexed: false # default: false; set to true if using pre-computed cell hashing demultiplexing results (e.g. Cell Ranger 'multi' pipeline output) - MUST provide path to results using 'hashing_assignments'
 # droplet_qc.Rmd
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
 cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
