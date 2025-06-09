@@ -75,6 +75,18 @@ Pipeline requires the following input files/folders:
 - **cells_loaded**: number of cells loaded
 - **hash_id**: hash ID (or 'None' if not used)
 
+**OPTIONAL:**
+
+3. Pre-computed hashing assignments table in delimited file format (e.g. TSV, CSV) with the following required fields (with headers):
+- **Barcode**: droplet barcode
+- **Type**: either 'singlet', 'multiplet', 'negative' or 'uncertain'
+- **Classification**: assigned hashtag ID (if 'singlet') or 'multiplet', 'negative' or 'uncertain'
+*or*
+**assignment_confidence_table.csv** output from Cell Ranger 'multi' pipeline
+4. Read counts table per sample by library type in TSV format with the following required fields (with headers):
+- **sample_id**: sample ID
+- **\***: 1 or more fields specifying library type (e.g. 'GEX', 'ATAC', 'ADT', 'HTO') with total read counts per sample
+
 # Output
 Output directories will be created in specified locations with subfolders containing the output of each QC step specified in the module:
 - **data**: processed data
