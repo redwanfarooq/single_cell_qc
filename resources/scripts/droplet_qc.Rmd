@@ -215,7 +215,7 @@ if (!all(c("Barcode", "Type", "Classification") %in% colnames(demux.res))) {
 }
 demux.res <- demux.res %>% tibble::column_to_rownames("Barcode")
 if (!all(demux.res[demux.res$Type == "singlet", "Assignments", drop = TRUE] %in% wl)) stop("Hashing assignments table contains assignments not found in the sample metadata table.")
-bc$features <- rownames(demux.res)
+bc$features <- intersect(rownames(demux.res), colnames(features.mat[[1]]))
 ```
 
 ```{r load-hto-matrix, eval=all(!params$pre_demultiplexed, !is.null(params$hto_matrix))}
