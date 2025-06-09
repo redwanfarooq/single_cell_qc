@@ -418,6 +418,9 @@ models <- lapply(dmm@models, function(x) class(x))
 demux.res <- dmm %>%
   dmmClassify() %>%
   mutate(Classification = if_else(grepl(",", HTO), "multiplet", HTO))
+```
+
+```{r process-hto-demultiplexing, eval=exists("demux.res")}
 demux.stats <- demux.res %>%
   as.data.frame() %>%
   group_by(Classification) %>%
@@ -426,17 +429,16 @@ demux.stats <- demux.stats$count %>%
   as.list() %>%
   setNames(demux.stats$Classification)
 demux.stats$singlet <- sum(demux.res$Type == "singlet")
-cols <- sapply(seq_along(wl), function(x) scales::brewer_pal(palette = "Greens", direction = -1)(length(wl))[x]) %>% setNames(wl)
-cols["multiplet"] <- "#d82526"
-cols["negative"] <- "lightgrey"
-cols["uncertain"] <- "#ffc156"
-```
-
-```{r filter-cells-by-hto-assignment, eval=exists("demux.res")}
 bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
   rownames()
 features.mat <- lapply(features.mat, function(x) x[, bc.cells])
+cols <- pals::brewer.greens(length(wl)) %>%
+  rev() %>%
+  setNames(wl)
+cols["multiplet"] <- "#d82526"
+cols["negative"] <- "lightgrey"
+cols["uncertain"] <- "#ffc156"
 ```
 
 ```{r hto-demultiplexing-classification, eval=all(!params$pre_demultiplexed, !is.null(params$hto_matrix))}
