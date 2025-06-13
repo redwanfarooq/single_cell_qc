@@ -53,7 +53,7 @@ def get_expected_cells_flag(wildcards, info: dict) -> str:
     Returns:
         String containing flag to be inserted into shell command.
     """
-    n_cells = sum(_.get("cells_loaded", 0) for _ in info[wildcards.sample].values()) * 0.625
+    n_cells = sum(_.get("cells_loaded", 0) for _ in info[wildcards.sample].values()) * 0.7 # ~70% capture rate of cells loaded (does not need to be precise)
     return f"--expected-cells {round(n_cells)}" if n_cells > 0 else ""
 
 
