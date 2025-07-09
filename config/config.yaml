@@ -114,7 +114,7 @@ atac_filters:
   blacklist_fraction: true # default: true
 adt_filters:
   zero_ambient: false # default: true; set to false if using CellBender
-  high_ambient: true # default: true; set to false if using CellBender
+  high_ambient: 10 # default: true; set to false if using CellBender
   high_controls: false # default: true
 # ambient_removal.Rmd
 gex_ambient_removal:
