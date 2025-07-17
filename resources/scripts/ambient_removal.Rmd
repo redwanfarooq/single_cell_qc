@@ -17,7 +17,7 @@ params:
   outdir: null
   features_matrix: null
   adt_prefix: ADT_
-  gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.05, "cluster_markers" = NULL)
+  gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
   adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
 ---
 
@@ -176,7 +176,7 @@ seu <- CreateSeuratObject(
 if (params$gex_ambient_removal$skip) {
   seu[["decontRNA"]] <- seu[["RNA"]]
 } else {
-  if (params$gex_ambient_removal$integrate_samples) {
+  if (params$gex_ambient_removal$integrate_samples && length(levels(seu$sample_id)) > 1) {
     seu <- split(seu, seu$sample_id) %>%
       NormalizeData() %>%
       FindVariableFeatures() %>%
@@ -237,11 +237,19 @@ UMAPPlot(seu, group.by = "ident") +
 
 ```{r gex-ambient-removal-cluster-markers, fig.width=7, fig.height=2.5*max(ceiling(length(params$gex_ambient_removal$cluster_markers)/2),1), eval=all(!is.null(features.mat[["Gene Expression"]]), !params$gex_ambient_removal$skip, !is.null(params$gex_ambient_removal$cluster_markers))}
 cat("### Cluster markers", "\n\n")
+# Auto-detect if gene names are Ensembl IDs and convert to gene symbols if needed
+gene.names <- Features(seu)
+if ((sum(grepl(pattern = "^ENS[A-Z]*[0-9]+", x = gene.names)) / length(gene.names)) > 0.5) {
+  features <- ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, keys = params$gex_ambient_removal$cluster_markers, keytype = "SYMBOL", columns = c("SYMBOL", "GENEID"))
+} else {
+  features <- params$gex_ambient_removal$cluster_markers
+}
+
 plots <- FeaturePlot(
   seu,
-  features = ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, keys = params$gex_ambient_removal$cluster_markers, keytype = "SYMBOL", columns = c("SYMBOL", "GENEID")),
+  features = features,
   combine = FALSE
-) %>%
+) %>% 
   Map(
     function(x, title) {
       x +
@@ -275,11 +283,11 @@ seu <- CreateSeuratObject(
 if (params$adt_ambient_removal$skip) {
   seu[["decontADT"]] <- seu[["ADT"]]
 } else {
-  if (params$adt_ambient_removal$integrate_samples) {
+  if (params$adt_ambient_removal$integrate_samples && length(levels(seu$sample_id)) > 1) {
     seu <- split(seu, seu$sample_id) %>%
       NormalizeData(normalization.method = "CLR", margin = 2) %>%
       ScaleData(features = rownames(seu)) %>%
-      RunPCA(features = rownames(seu)) %>%
+      RunPCA(features = rownames(seu), approx = FALSE) %>%
       IntegrateLayers(features = rownames(seu), method = RPCAIntegration, orig.reduction = "pca", new.reduction = "integrated") %>%
       JoinLayers(layers = "counts")
     reduction <- "integrated"
@@ -287,7 +295,7 @@ if (params$adt_ambient_removal$skip) {
     seu <- seu %>%
       NormalizeData(normalization.method = "CLR", margin = 2) %>%
       ScaleData(features = rownames(seu)) %>%
-      RunPCA(features = rownames(seu))
+      RunPCA(features = rownames(seu), approx = FALSE)
     reduction <- "pca"
   }
 
