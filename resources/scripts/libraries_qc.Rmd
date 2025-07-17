@@ -164,8 +164,14 @@ bc <- list()
 cat("## GEX QC metrics {.tabset}", "\n\n")
 sce <- SingleCellExperiment(assays = list(counts = features.mat[["gex"]])) %>%
   add.cell.metadata(droplet.qc.res)
-is.mito <- grep(pattern = "^MT-", ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, keys = rownames(sce), keytype = "GENEID", column = "SYMBOL")) %>%
-  suppressWarnings() # pattern matching for mitochondrial genes
+# Auto detect if gene names are Ensembl IDs and convert to gene symbols if needed
+gene.names <- rownames(sce)
+if ((sum(grepl(pattern = "^ENS[A-Z]*[0-9]+", x = gene.names)) / length(gene.names)) > 0.5) {
+  is.mito <- grep(pattern = "^MT-", ensembldb::mapIds(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, keys = gene.names, keytype = "GENEID", column = "SYMBOL")) %>%
+    suppressWarnings() 
+} else {
+  is.mito <- grep(pattern = "^MT-", gene.names)
+} # pattern matching for mitochondrial genes
 sce <- addPerCellQC(sce, subsets = list(mito = is.mito))
 qc <- data.frame(row.names = colnames(sce))
 if (as.logical(params$gex_filters$library_size)) qc$low_lib_size <- if (is.logical(params$gex_filters$library_size)) isOutlier(sce$sum, type = "lower", log = TRUE) else sce$sum < params$gex_filters$library_size
