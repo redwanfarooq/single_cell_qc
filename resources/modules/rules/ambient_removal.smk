@@ -19,7 +19,7 @@ rule ambient_removal:
         droplet_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"),
         libraries_qc = lambda wildcards: os.path.join(config["output_dir"]["data"], "libraries_qc/{sample}"),
         outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "finalised/{sample}"),
-        features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules),
+        features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules, filtered=config.get("pre_filtered", None)),
         adt_prefix = config.get("adt_prefix", None),
         gex_ambient_removal = config.get("gex_ambient_removal", None),
         adt_ambient_removal = config.get("adt_ambient_removal", None)
