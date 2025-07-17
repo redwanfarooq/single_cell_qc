@@ -75,6 +75,7 @@ if (!is.null(opt$adt)) {
   }
   counts[["Antibody Capture"]] <- counts[["Antibody Capture"]][, colSums(counts[["Antibody Capture"]]) > 0] # remove cell barcodes with zero counts
 }
+counts <- counts[sapply(counts, function(x) nrow(x) > 0)] # remove empty matrices
 
 logger::log_info("Merging count matrices")
 bc.common <- Reduce(intersect, lapply(counts, colnames))
