@@ -75,28 +75,28 @@ adt_isotype: null # default: null; regex pattern for isotype control antibody ID
 pre_filtered: true # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
 pre_demultiplexed: true # default: false; set to true if using pre-computed cell hashing demultiplexing results (e.g. Cell Ranger 'multi' pipeline output) - MUST provide path to results using 'hashing_assignments'
 # droplet_qc.Rmd
-# cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
-# cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
-#   - gex
-#   - atac
-#   - adt
-# ordmag_quantile: 0.99 # default: 0.99
-# ordmag_ratio: 10 # default: 10
-# emptydrops_umi_min: 500 # default: 500
-# emptydrops_umi_min_frac_median: 0.01 # default: 0.01
-# emptydrops_cand_max_n: 20000 # default: 20000
-# emptydrops_ind_min: 45000 # default: 45000
-# emptydrops_ind_max: 90000 # default: 90000
-# emptydrops_niters: 10000 # default: 10000
-# emptydrops_max_attempts: 3 # default: 3
-# demuxmix_model: auto # default: auto; options: auto, naive
-# demuxmix_pAcpt: 0.9 # default: 0.9
+cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
+cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
+  - gex
+  - atac
+  - adt
+ordmag_quantile: 0.99 # default: 0.99
+ordmag_ratio: 10 # default: 10
+emptydrops_umi_min: 500 # default: 500
+emptydrops_umi_min_frac_median: 0.01 # default: 0.01
+emptydrops_cand_max_n: 20000 # default: 20000
+emptydrops_ind_min: 45000 # default: 45000
+emptydrops_ind_max: 90000 # default: 90000
+emptydrops_niters: 10000 # default: 10000
+emptydrops_max_attempts: 3 # default: 3
+demuxmix_model: auto # default: auto; options: auto, naive
+demuxmix_pAcpt: 0.9 # default: 0.9
 multiplet_calling_algorithm: null # default: null; options: scdblfinder, composite, combined
-# scdblfinder_clusters: true # default: true
-# scdblfinder_dbr_sd: null # default: null
-# scdblfinder_nfeatures: 1500 # default: 1500
-# scdblfinder_npcs: 20 # default: 20
-# scdblfinder_max_depth: 5 # default: 5
+scdblfinder_clusters: true # default: true
+scdblfinder_dbr_sd: null # default: null
+scdblfinder_nfeatures: 1500 # default: 1500
+scdblfinder_npcs: 20 # default: 20
+scdblfinder_max_depth: 5 # default: 5
 # libraries_qc.Rmd
 # Each filter can be specified as 'false', 'true' or a numeric threshold
 # If set to 'false', the filter will be skipped
