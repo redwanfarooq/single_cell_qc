@@ -122,7 +122,7 @@ gex_ambient_removal:
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
-  cluster_res: 0.05 # default: 0.05
+  cluster_res: 0.2 # default: 0.2
   cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
 adt_ambient_removal:
   skip: false # default: false
