@@ -89,7 +89,7 @@ set-resources:
     runtime: 1h
   ambient_removal:
     mem: 128GiB
-    runtime: 6h
+    runtime: 24h
   filter_barcodes:
     mem: 8GiB
     runtime: 1h
