@@ -122,7 +122,7 @@ gex_ambient_removal:
   integrate_samples: true # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
-  cluster_res: 0.5 # default: 0.05
+  cluster_res: 0.2 # default: 0.05
   cluster_markers: # default: null; list of cluster marker gene symbols for diagnostic plots
     - CD3D
     - CD4
@@ -137,7 +137,7 @@ adt_ambient_removal:
   integrate_samples: true # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
-  cluster_res: 0.5 # default: 0.2
+  cluster_res: 0.2 # default: 0.2
   cluster_markers: # default: null; list of cluster marker ADT IDs (without prefix) for diagnostic plots
     - CD3
     - CD4
