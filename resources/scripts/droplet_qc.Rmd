@@ -433,7 +433,7 @@ bc.cells <- demux.res %>%
   filter(Type %in% c("singlet", "multiplet")) %>%
   rownames()
 features.mat <- lapply(features.mat, function(x) x[, bc.cells])
-cols <- pals::brewer.greens(length(wl)) %>%
+cols <- pals::brewer.greens(max(length(wl), 3)) %>%
   rev() %>%
   setNames(wl)
 cols["multiplet"] <- "#d82526"
@@ -675,10 +675,10 @@ summary.stats <- cc.stats[c("loaded", "cells")] %>%
   )
 if (exists("demux.stats")) {
   summary.stats <- summary.stats %>%
-    cbind(demux.stats[c("singlet", "multiplet", "negative", "uncertain")]) %>%
-    mutate(
-      undetermined = negative + uncertain
-    )
+    cbind(demux.stats[match(c("singlet", "multiplet", "negative", "uncertain"), names(demux.stats), nomatch = 0)])
+  if ("negative" %in% colnames(summary.stats) && "uncertain" %in% colnames(summary.stats)) {
+    summary.stats <- summary.stats %>% mutate(undetermined = negative + uncertain)
+  }
 }
 if (exists("multiplet.stats")) {
   summary.stats$singlet <- multiplet.stats$singlet
