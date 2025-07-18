@@ -308,7 +308,7 @@ if (params$adt_ambient_removal$skip) {
     ) %>%
     FindClusters(resolution = params$adt_ambient_removal$cluster_res)
 
-  decont.adt <- decontPro(features.mat[["Antibody Capture"]], cell_type = as.integer(Idents(seu)), delta_sd = params$adt_ambient_removal$delta_sd, background_sd = params$adt_ambient_removal$background_sd)
+  decont.adt <- decontPro(features.mat[["Antibody Capture"]], cell_type = as.integer(Idents(seu)), delta_sd = as.numeric(params$adt_ambient_removal$delta_sd), background_sd = as.numeric(params$adt_ambient_removal$background_sd))
   seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 }
 
