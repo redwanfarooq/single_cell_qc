@@ -147,6 +147,8 @@ adt_ambient_removal:
     - CD19
     - CD56
     - CD11c
+  delta_sd: 2e-5 # default: 2e-5; prior for delta standard deviation
+  background_sd: 2e-6 # default: 2e-6; prior for background standard deviation
 # summary_report.qmd
 # target_depth:
 #   GEX: 20000 # default: 20000

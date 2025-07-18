@@ -18,7 +18,7 @@ params:
   features_matrix: null
   adt_prefix: ADT_
   gex_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
-  adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL)
+  adt_ambient_removal: !r list("skip" = FALSE, "integrate_samples" = FALSE, "cluster_ndims" = 10, "cluster_k" = 20, "cluster_res" = 0.2, "cluster_markers" = NULL, "delta_sd" = 2e-5, "background_sd" = 2e-6)
 ---
 
 ```{r setup, include=FALSE}
@@ -308,7 +308,7 @@ if (params$adt_ambient_removal$skip) {
     ) %>%
     FindClusters(resolution = params$adt_ambient_removal$cluster_res)
 
-  decont.adt <- decontPro(features.mat[["Antibody Capture"]], cell_type = as.integer(Idents(seu)), delta_sd = 5e-5, background_sd = 5e-6)
+  decont.adt <- decontPro(features.mat[["Antibody Capture"]], cell_type = as.integer(Idents(seu)), delta_sd = params$adt_ambient_removal$delta_sd, background_sd = params$adt_ambient_removal$background_sd)
   seu[["decontADT"]] <- CreateAssayObject(counts = round(decont.adt$decontaminated_counts))
 }
 
