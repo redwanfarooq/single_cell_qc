@@ -103,9 +103,9 @@ scdblfinder_max_depth: 5 # default: 5
 # If set to 'true', the filter will be applied using automated outlier-based thresholds
 # If set to a numeric threshold, the filter will be applied using the specified threshold
 gex_filters:
-  library_size: false # default: true
-  library_complexity: false # default: true
-  mitochondrial_fraction: false # default: true
+  library_size: true # default: true
+  library_complexity: true # default: true
+  mitochondrial_fraction: true # default: true
 atac_filters:
   fragment_count: true # default: true
   tss_enrichment: true # default: true
