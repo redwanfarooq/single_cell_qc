@@ -131,6 +131,8 @@ adt_ambient_removal:
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
   cluster_markers: null # default: null; list of cluster marker ADT IDs (without prefix) for diagnostic plots
+  delta_sd: 2e-5 # default: 2e-5; prior for delta standard deviation
+  background_sd: 2e-6 # default: 2e-6; prior for background standard deviation
 # summary_report.qmd
 target_depth:
   GEX: 20000 # default: 20000
