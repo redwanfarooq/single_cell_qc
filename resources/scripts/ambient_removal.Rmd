@@ -368,6 +368,8 @@ cat("* **Pre-clustering sample integration:**", ifelse(params$adt_ambient_remova
 cat("* **Graph principal components:**", params$adt_ambient_removal$cluster_ndims, "\n")
 cat("* **Graph nearest neighbours (k):**", params$adt_ambient_removal$cluster_k, "\n")
 cat("* **Cluster resolution:**", params$adt_ambient_removal$cluster_res, "\n")
+cat("* **Prior for delta standard deviation:**", params$adt_ambient_removal$delta_sd, "\n")
+cat("* **Prior for background standard deviation:**", params$adt_ambient_removal$background_sd, "\n")
 ```
 
 ```{r output}
