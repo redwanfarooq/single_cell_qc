@@ -163,5 +163,5 @@ cellbender_args: >-
   --cuda
   --fpr 0
   --exclude-feature-types Peaks
-  --total-droplets-included 50000
+  --total-droplets-included 65000
   --learning-rate 0.00005

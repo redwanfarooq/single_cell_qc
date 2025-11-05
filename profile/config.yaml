@@ -79,8 +79,8 @@ set-resources:
   cellbender:
     partition: gpu
     gpus: 1
-    mem: 24GiB
-    runtime: 2h
+    mem: 48GiB
+    runtime: 6h
   droplet_qc:
     mem: 32GiB
     runtime: 1h
