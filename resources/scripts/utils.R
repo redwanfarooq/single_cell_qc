@@ -702,7 +702,6 @@ emptydrops.multimodal <- function(matrix.list,
     n.expected.cells = n.expected.cells
   ) %>%
     Reduce(intersect, ., init = barcodes)
-
   # rank barcodes by total counts and determine for each modality:
   # - lower: the count threshold below which barcodes are used to estimate the ambient profile
   # - ignore: the count threshold below which barcodes are not considered as potentially cell-containing
@@ -716,6 +715,16 @@ emptydrops.multimodal <- function(matrix.list,
   exclude <- lapply(ranked, function(ranked) {
     names(ranked[seq.int(from = ind.max, to = length(ranked))])
   })
+  # remove barcodes with total counts below ignore threshold from prefiltered set
+  prefiltered <- mapply(
+    function(total, minimum) {
+      names(total)[total >= minimum]
+    },
+    total = totals,
+    minimum = ignore,
+    SIMPLIFY = FALSE
+  ) %>%
+    Reduce(intersect, ., init = prefiltered)
   # remove prefiltered and excluded barcodes from count matrices prior to running EmptyDrops
   filtered <- mapply(function(x, exclude) {
     x[, !colnames(x) %in% c(exclude, prefiltered)]

@@ -94,6 +94,11 @@ def eval_depth(x: pd.Series, targets: dict) -> list[str] | None:
         )
         for _ in x
     ]
+
+def has_hashing_assignments(file: str) -> bool:
+    with gzip.open(file, "rt", encoding="utf-8") as f:
+        header = f.readline().strip().split("\t")
+        return "hash_id" in header
 ```
 
 ```{python}
@@ -534,7 +539,7 @@ cols = [
     "% Excluded",
 ]
 
-if all(os.path.isfile(files[1]) for files in files["droplet_qc"].values()):
+if all(has_hashing_assignments(files[2]) for files in files["droplet_qc"].values()):
     cells = {sample: [] for sample in files["libraries_qc"].keys()}
     for sample, filelist in files["libraries_qc"].items():
         with gzip.open(filelist[1], mode="rt", encoding="utf-8") as file:

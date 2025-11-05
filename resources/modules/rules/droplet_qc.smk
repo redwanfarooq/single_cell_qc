@@ -21,10 +21,12 @@ rule droplet_qc:
         metadata = os.path.join(metadata_dir, config["samples"]) if os.path.isabs(metadata_dir) else os.path.join(workflow.basedir, metadata_dir, config["samples"]),
         features_matrix = lambda wildcards: get_features_matrix(wildcards, data_dir=config["output_dir"]["data"], cellbender="cellbender" in module_rules and config.get("pre_filtered", None), filtered=config.get("pre_filtered", None)),
         hto_matrix = lambda wildcards: config.get("hto_matrix", None),
+        hashing_assignments = lambda wildcards: config.get("hashing_assignments", None),
         hto_prefix = config.get("hto_prefix", None),
         fragments = os.path.join(os.path.dirname(os.path.dirname(config["atac_matrix"])), "fragments.tsv.gz") if "atac_matrix" in config else None, # fragments file expected to be in parent directory of directory containing ATAC matrix
         outdir = lambda wildcards: os.path.join(config["output_dir"]["data"], "droplet_qc/{sample}"), # DO NOT CHANGE - downstream rules will search for output files in this directory
         pre_filtered = config.get("pre_filtered", None),
+        pre_demultiplexed = config.get("pre_demultiplexed", None),
         cell_calling_algorithm = config.get("cell_calling_algorithm", None),
         cell_calling_modalities = config.get("cell_calling_modalities", None),
         ordmag_quantile = config.get("ordmag_quantile", None),

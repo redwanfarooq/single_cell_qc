@@ -32,6 +32,13 @@ gex_matrix: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/raw/gex_fb/cd
 # hto_matrix: /path/to/hto_dir/{sample}/file.ext
 # atac_matrix: /path/to/atac_dir/{sample}/file.ext
 # adt_matrix: /path/to/adt_dir/{sample}/file.ext
+# File path to delimited file (e.g. TSV, CSV) containing pre-computed results of cell hashing demultiplexing per cell-containing barcode
+# Output of Cell Ranger 'multi' pipeline (assignment_confidence_table.csv) is automatically recognized
+# If using a different demultiplexing tool, MUST contain the following columns:
+#   Barcode: droplet barcode
+#   Type: either 'singlet', 'multiplet', 'negative' or 'uncertain'
+#   Classification: assigned hashtag ID (if 'singlet') or 'multiplet', 'negative' or 'uncertain'
+# hashing_assignments: /path/to/file.ext
 # File path to TSV file containing total sequencing read counts per library type/sample
 # MUST contain column 'sample' and 1 column per library type
 read_counts: /project/fuggerlab/rfarooq/project/ms_snp_crispri/data/raw/gex_fb/cd4_ms17_ms19_stat4_02/qc/count_reads/read_counts.tsv
@@ -66,6 +73,7 @@ samples: samples.tsv
 # adt_isotype: null # default: null; regex pattern for isotype control antibody IDs
 # hto_prefix: HTO_ # default: HTO_; prefix for HTO features (use 'CMO' if using 10x cell multiplexing kit with CellRanger built-in reference)
 pre_filtered: false # default: false; set to true if input matrices are pre-filtered (i.e. only cell-containing barcodes) or if using CellBender for cell calling
+pre_demultiplexed: false # default: false; set to true if using pre-computed cell hashing demultiplexing results (e.g. Cell Ranger 'multi' pipeline output) - MUST provide path to results using 'hashing_assignments'
 # droplet_qc.Rmd
 cell_calling_algorithm: emptydrops # default: emptydrops; options: emptydrops, kmeans, combined
 cell_calling_modalities: # default: gex, atac, adt; options: gex, atac, adt
@@ -114,7 +122,7 @@ gex_ambient_removal:
   integrate_samples: false # default: false
   cluster_ndims: 10 # default: 10
   cluster_k: 20 # default: 20
-  cluster_res: 0.05 # default: 0.05
+  cluster_res: 0.2 # default: 0.2
   cluster_markers: null # default: null; list of cluster marker gene symbols for diagnostic plots
 adt_ambient_removal:
   skip: true # default: false
@@ -123,6 +131,8 @@ adt_ambient_removal:
   cluster_k: 20 # default: 20
   cluster_res: 0.2 # default: 0.2
   cluster_markers: null # default: null; list of cluster marker ADT IDs (without prefix) for diagnostic plots
+  delta_sd: 2e-5 # default: 2e-5; prior for delta standard deviation
+  background_sd: 2e-6 # default: 2e-6; prior for background standard deviation
 # summary_report.qmd
 target_depth:
   GEX: 20000 # default: 20000
@@ -130,6 +140,8 @@ target_depth:
   # ADT: 5000 # default: 5000
   # HTO: 2000 # default: 2000
   CRISPR: 5000 # default: 5000
+  # BCR: 5000 # default: 5000
+  # TCR: 5000 # default: 5000
 
 
 # --------------------------------------------------
