@@ -80,7 +80,7 @@ set-resources:
     partition: gpu
     gpus: 1
     mem: 24GiB
-    runtime: 2h
+    runtime: 3h
   droplet_qc:
     mem: 32GiB
     runtime: 1h
